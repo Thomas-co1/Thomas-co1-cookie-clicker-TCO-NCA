@@ -1,0 +1,47 @@
+# Dépendances
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Fichiers de test et couverture
+coverage/
+*.lcov
+.nyc_output
+
+# Fichiers de build
+dist/
+build/
+
+# Fichiers d'environnement
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Fichiers temporaires
+tmp/
+temp/
+*.tmp
