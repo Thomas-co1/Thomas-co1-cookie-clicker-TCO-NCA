@@ -2,7 +2,8 @@ function createGameState() {
   return {
     cookies: 0,
     cookiesPerClick: 1,
-    cookiesPerSecond: 0
+    cookiesPerSecond: 0,
+    clickUpgrades: 0
   };
 }
 
@@ -20,11 +21,13 @@ function toNonNegativeNumber(value, fallback = 0) {
 
 function normalizeState(state) {
   const baseState = state && typeof state === 'object' ? state : {};
+  const clickUpgrades = toNonNegativeNumber(baseState.clickUpgrades, 0);
 
   return {
     ...baseState,
     cookies: toNonNegativeNumber(baseState.cookies, 0),
-    cookiesPerClick: toNonNegativeNumber(baseState.cookiesPerClick, 1),
+    clickUpgrades: clickUpgrades,
+    cookiesPerClick: 1 + clickUpgrades,
     cookiesPerSecond: toNonNegativeNumber(baseState.cookiesPerSecond, 0)
   };
 }
@@ -68,6 +71,47 @@ function spendCookies(state, cost) {
   };
 }
 
+function getClickUpgradeCost(count) {
+  const safeCount = toNonNegativeNumber(count, 0);
+  return Math.floor(10 * Math.pow(1.5, safeCount));
+}
+
+function getAutoClickerCost(cps) {
+  const safeCPS = toNonNegativeNumber(cps, 0);
+  return Math.floor(15 * Math.pow(1.15, safeCPS));
+}
+
+function buyClickUpgrade(state) {
+  const safeState = normalizeState(state);
+  const cost = getClickUpgradeCost(safeState.clickUpgrades);
+
+  if (!canAfford(safeState.cookies, cost)) {
+    return safeState;
+  }
+
+  const newState = spendCookies(safeState, cost);
+  return {
+    ...newState,
+    clickUpgrades: newState.clickUpgrades + 1,
+    cookiesPerClick: 1 + (newState.clickUpgrades + 1)
+  };
+}
+
+function buyAutoClicker(state) {
+  const safeState = normalizeState(state);
+  const cost = getAutoClickerCost(safeState.cookiesPerSecond);
+
+  if (!canAfford(safeState.cookies, cost)) {
+    return safeState;
+  }
+
+  const newState = spendCookies(safeState, cost);
+  return {
+    ...newState,
+    cookiesPerSecond: newState.cookiesPerSecond + 1
+  };
+}
+
 function getCookiesPerSecond(upgrades) {
   if (!upgrades || typeof upgrades !== 'object') {
     return 0;
@@ -91,9 +135,12 @@ const clickerApi = {
   addPassiveCookies,
   canAfford,
   spendCookies,
-  getCookiesPerSecond
+  getCookiesPerSecond,
+  getClickUpgradeCost,
+  getAutoClickerCost,
+  buyClickUpgrade,
+  buyAutoClicker
 };
-
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = clickerApi;
@@ -106,12 +153,15 @@ if (typeof window !== 'undefined') {
     const cookieButton = document.getElementById('cookie-button');
     const cookieCount = document.getElementById('cookie-count');
     const cpsDisplay = document.getElementById('cps-count');
-    
-    // Elements for upgrades
+    const cookiesPerClickDisplay = document.getElementById('cookies-per-click');
+
+    // Upgrade buttons and meta
+    const upgradeClickBtn = document.getElementById('upgrade-click');
+    const upgradeClickCost = document.getElementById('upgrade-click-cost');
+    const upgradeClickCount = document.getElementById('upgrade-click-count');
+
     const buyAutoClickerBtn = document.getElementById('buy-autoclicker');
     const autoClickerPrice = document.getElementById('autoclicker-price');
-    const buySuperClickerBtn = document.getElementById('buy-superclicker');
-    const superClickerPrice = document.getElementById('superclicker-price');
 
     if (!cookieButton || !cookieCount) {
       return;
@@ -119,24 +169,32 @@ if (typeof window !== 'undefined') {
 
     let state = createGameState();
 
-    const calculatePrice = (basePrice, currentCPS) => {
-      // Very simple approximation: since we don't store individual upgrade counts, 
-      // we use CPS as a proxy for total upgrades.
-      // But it's better to store counts. For now, we'll use a formula based on total CPS.
-      return Math.floor(basePrice * Math.pow(1.15, currentCPS));
-    };
-
     const updateUI = () => {
       cookieCount.textContent = Math.floor(state.cookies).toLocaleString();
-      if (cpsDisplay) cpsDisplay.textContent = state.cookiesPerSecond.toLocaleString();
       
-      // Update Auto-Clicker price and button
-      if (buyAutoClickerBtn && autoClickerPrice) {
-        // Here we use a simplified version where CPS = number of auto-clickers
-        // This isn't perfect if there are multiple types, but it's a start.
-        const price = Math.floor(15 * Math.pow(1.15, state.cookiesPerSecond));
-        autoClickerPrice.textContent = price;
-        buyAutoClickerBtn.disabled = state.cookies < price;
+      if (cpsDisplay) {
+        cpsDisplay.textContent = state.cookiesPerSecond.toLocaleString();
+      }
+      
+      if (cookiesPerClickDisplay) {
+        cookiesPerClickDisplay.textContent = state.cookiesPerClick;
+      }
+
+      // Update Click Upgrade UI
+      if (upgradeClickCost) {
+        const cost = getClickUpgradeCost(state.clickUpgrades);
+        upgradeClickCost.textContent = cost.toLocaleString();
+        if (upgradeClickBtn) upgradeClickBtn.disabled = !canAfford(state.cookies, cost);
+      }
+      if (upgradeClickCount) {
+        upgradeClickCount.textContent = state.clickUpgrades;
+      }
+
+      // Update Auto-Clicker UI
+      if (autoClickerPrice) {
+        const cost = getAutoClickerCost(state.cookiesPerSecond);
+        autoClickerPrice.textContent = cost.toLocaleString();
+        if (buyAutoClickerBtn) buyAutoClickerBtn.disabled = !canAfford(state.cookies, cost);
       }
     };
 
@@ -146,7 +204,9 @@ if (typeof window !== 'undefined') {
       .then(data => {
         if (data) {
           state.cookies = data.score;
+          state.clickUpgrades = data.clickUpgrades || 0;
           state.cookiesPerSecond = data.cookiesPerSecond || 0;
+          state = normalizeState(state);
           updateUI();
         }
       })
@@ -160,6 +220,7 @@ if (typeof window !== 'undefined') {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           score: state.cookies,
+          clickUpgrades: state.clickUpgrades,
           cookiesPerSecond: state.cookiesPerSecond
         })
       }).catch(err => console.error('Erreur lors de la sauvegarde du score:', err));
@@ -170,15 +231,19 @@ if (typeof window !== 'undefined') {
       updateUI();
     });
 
+    if (upgradeClickBtn) {
+      upgradeClickBtn.addEventListener('click', () => {
+        state = buyClickUpgrade(state);
+        updateUI();
+        saveScore();
+      });
+    }
+
     if (buyAutoClickerBtn) {
       buyAutoClickerBtn.addEventListener('click', () => {
-        const price = Math.floor(15 * Math.pow(1.15, state.cookiesPerSecond));
-        if (state.cookies >= price) {
-          state.cookies -= price;
-          state.cookiesPerSecond += 1;
-          updateUI();
-          saveScore();
-        }
+        state = buyAutoClicker(state);
+        updateUI();
+        saveScore();
       });
     }
 

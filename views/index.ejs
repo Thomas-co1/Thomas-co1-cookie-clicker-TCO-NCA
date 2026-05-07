@@ -73,10 +73,17 @@
       <p class="subtitle">Clique sur le cookie pour gagner des points.</p>
 
       <section class="score-card" aria-live="polite">
-        <span class="score-label">Cookies</span>
-        <span id="cookie-count" class="score-value">0</span>
-        <div class="cps-display">
-          <span id="cps-count">0</span> cookies / sec
+        <div class="score-group">
+          <span class="score-label">Cookies</span>
+          <span id="cookie-count" class="score-value">0</span>
+        </div>
+        <div class="score-group">
+          <span class="score-label">Par clic</span>
+          <span id="cookies-per-click" class="score-value">1</span>
+        </div>
+        <div class="score-group">
+          <span class="score-label">Cookies / sec</span>
+          <span id="cps-count" class="score-value">0</span>
         </div>
       </section>
 
@@ -84,22 +91,41 @@
         <span class="cookie-fallback" aria-hidden="true">Cookie</span>
       </button>
 
-      <section class="upgrades">
+      <section class="upgrades-panel">
         <h2 class="section-title">Améliorations</h2>
-        <div class="upgrade-item">
-          <div class="upgrade-info">
-            <span class="upgrade-name">Auto-Clicker</span>
-            <span class="upgrade-desc">Produit 1 cookie par seconde</span>
-          </div>
-          <button id="buy-autoclicker" class="buy-button" disabled>
-            Acheter (<span id="autoclicker-price">15</span>)
+        <div class="upgrades-list">
+          <!-- Super Click Upgrade -->
+          <button id="upgrade-click" class="upgrade-item" type="button">
+            <div class="upgrade-icon-container">
+              <img src="/images/click_upgrade.png" alt="Clic" class="upgrade-icon">
+            </div>
+            <div class="upgrade-info">
+              <span class="upgrade-name">Super Clic</span>
+              <span class="upgrade-desc">Augmente les cookies par clic de 1</span>
+            </div>
+            <div class="upgrade-meta">
+              <span class="upgrade-cost"><span id="upgrade-click-cost">10</span> 🍪</span>
+              <span class="upgrade-count">Niv. <span id="upgrade-click-count">0</span></span>
+            </div>
+          </button>
+
+          <!-- Auto Clicker Upgrade -->
+          <button id="buy-autoclicker" class="upgrade-item" type="button">
+            <div class="upgrade-icon-container">
+              <span style="font-size: 24px;">🤖</span>
+            </div>
+            <div class="upgrade-info">
+              <span class="upgrade-name">Auto-Clicker</span>
+              <span class="upgrade-desc">Produit 1 cookie par seconde</span>
+            </div>
+            <div class="upgrade-meta">
+              <span class="upgrade-cost"><span id="autoclicker-price">15</span> 🍪</span>
+            </div>
           </button>
         </div>
       </section>
-
     </main>
 
     <script src='/javascripts/clicker.js'></script>
   </body>
 </html>
-
