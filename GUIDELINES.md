@@ -53,5 +53,22 @@ Le projet impose une couverture de tests minimale de **90%**. Chaque nouvelle fo
 - **Issues** : Chaque tâche doit être liée à une issue GitHub décrivant le besoin et les critères d'acceptation.
 - **PRs** : Utilisez le template fourni. Une PR doit être liée à une issue (ex: `Closes #12`) et ne doit pas être mergée si la CI échoue.
 
+## 🧪 Tests et Qualité
+
+### Tests Unitaires (Vitest)
+Vérifient la logique pure (mathématiques, gains, coûts). Ils doivent être rapides et indépendants du DOM.
+
+### Tests E2E (Playwright)
+Vérifient le comportement réel dans le navigateur (clics, navigation, persistance). 
+- **Configuration** : Utilisez le port défini dans `.env` (par défaut 3001).
+- **Stabilité** : Utilisez `waitForLoadState('networkidle')` après les connexions ou rechargements pour garantir l'initialisation du JS.
+
+## ⚙️ Gestion de l'État (State Management)
+
+Toute modification de l'état du jeu doit passer par la fonction `normalizeState(state)`. Cette fonction garantit :
+- L'intégrité des données (pas de valeurs négatives ou `NaN`).
+- Le calcul correct des multiplicateurs et bonus de prestige.
+- La cohérence entre les objets de sauvegarde et l'état interne.
+
 ---
 En suivant ces règles, nous garantissons la qualité et la maintenabilité du projet sur le long terme.
