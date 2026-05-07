@@ -6,7 +6,7 @@ test.describe('Authentication E2E', () => {
     const password = 'password123';
 
     // Registration
-    await page.goto('http://localhost:3000/users/register');
+    await page.goto('http://localhost:3001/users/register');
     await page.fill('input[name="username"]', username);
     await page.fill('input[name="password"]', password);
     await page.click('button[type="submit"]');
@@ -20,7 +20,7 @@ test.describe('Authentication E2E', () => {
     await page.click('button[type="submit"]');
 
     // Should redirect to home
-    await expect(page).toHaveURL('http://localhost:3000/');
+    await expect(page).toHaveURL('http://localhost:3001/');
     
     // Check if username is displayed
     await expect(page.locator('.username')).toContainText(username);
@@ -31,25 +31,28 @@ test.describe('Authentication E2E', () => {
     const password = 'password123';
 
     // Register and login
-    await page.goto('http://localhost:3000/users/register');
+    await page.goto('http://localhost:3001/users/register');
     await page.fill('input[name="username"]', username);
     await page.fill('input[name="password"]', password);
     await page.click('button[type="submit"]');
     await page.fill('input[name="username"]', username);
     await page.fill('input[name="password"]', password);
     await page.click('button[type="submit"]');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Click cookie
     const cookieButton = page.locator('#cookie-button');
     for (let i = 0; i < 5; i++) {
       await cookieButton.click();
+      await page.waitForTimeout(200);
     }
 
     // Verify count
     await expect(page.locator('#cookie-count')).toHaveText('5');
 
-    // Wait for auto-save (5s interval in clicker.js)
-    await page.waitForTimeout(6000);
+    // Wait for auto-save (10s interval in clicker.js)
+    await page.waitForTimeout(12000);
 
     // Reload
     await page.reload();
