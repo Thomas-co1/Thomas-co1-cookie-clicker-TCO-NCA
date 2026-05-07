@@ -2,7 +2,8 @@ function createGameState() {
   return {
     cookies: 0,
     cookiesPerClick: 1,
-    cookiesPerSecond: 0
+    cookiesPerSecond: 0,
+    clickUpgrades: 0
   };
 }
 
@@ -20,11 +21,13 @@ function toNonNegativeNumber(value, fallback = 0) {
 
 function normalizeState(state) {
   const baseState = state && typeof state === 'object' ? state : {};
+  const clickUpgrades = toNonNegativeNumber(baseState.clickUpgrades, 0);
 
   return {
     ...baseState,
     cookies: toNonNegativeNumber(baseState.cookies, 0),
-    cookiesPerClick: toNonNegativeNumber(baseState.cookiesPerClick, 1),
+    clickUpgrades: clickUpgrades,
+    cookiesPerClick: 1 + clickUpgrades,
     cookiesPerSecond: toNonNegativeNumber(baseState.cookiesPerSecond, 0)
   };
 }
@@ -68,6 +71,27 @@ function spendCookies(state, cost) {
   };
 }
 
+function getClickUpgradeCost(count) {
+  const safeCount = toNonNegativeNumber(count, 0);
+  return Math.floor(10 * Math.pow(1.5, safeCount));
+}
+
+function buyClickUpgrade(state) {
+  const safeState = normalizeState(state);
+  const cost = getClickUpgradeCost(safeState.clickUpgrades);
+
+  if (!canAfford(safeState.cookies, cost)) {
+    return safeState;
+  }
+
+  const newState = spendCookies(safeState, cost);
+  return {
+    ...newState,
+    clickUpgrades: newState.clickUpgrades + 1,
+    cookiesPerClick: 1 + (newState.clickUpgrades + 1)
+  };
+}
+
 function getCookiesPerSecond(upgrades) {
   if (!upgrades || typeof upgrades !== 'object') {
     return 0;
@@ -91,7 +115,9 @@ const clickerApi = {
   addPassiveCookies,
   canAfford,
   spendCookies,
-  getCookiesPerSecond
+  getCookiesPerSecond,
+  getClickUpgradeCost,
+  buyClickUpgrade
 };
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -104,6 +130,10 @@ if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     const cookieButton = document.getElementById('cookie-button');
     const cookieCount = document.getElementById('cookie-count');
+    const upgradeClickBtn = document.getElementById('upgrade-click');
+    const upgradeClickCost = document.getElementById('upgrade-click-cost');
+    const upgradeClickCount = document.getElementById('upgrade-click-count');
+    const cookiesPerClickDisplay = document.getElementById('cookies-per-click');
 
     if (!cookieButton || !cookieCount) {
       return;
@@ -111,31 +141,64 @@ if (typeof window !== 'undefined') {
 
     let state = createGameState();
 
+    const updateUI = () => {
+      cookieCount.textContent = Math.floor(state.cookies).toLocaleString();
+      
+      if (upgradeClickCost) {
+        const cost = getClickUpgradeCost(state.clickUpgrades);
+        upgradeClickCost.textContent = cost.toLocaleString();
+        
+        if (upgradeClickBtn) {
+          upgradeClickBtn.disabled = !canAfford(state.cookies, cost);
+        }
+      }
+      
+      if (upgradeClickCount) {
+        upgradeClickCount.textContent = state.clickUpgrades;
+      }
+      
+      if (cookiesPerClickDisplay) {
+        cookiesPerClickDisplay.textContent = state.cookiesPerClick;
+      }
+    };
+
     // Fetch initial score from server
     fetch('/users/score')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) {
           state.cookies = data.score;
-          cookieCount.textContent = String(state.cookies);
+          state.clickUpgrades = data.clickUpgrades || 0;
+          state = normalizeState(state);
+          updateUI();
         }
       })
       .catch(err => console.error('Erreur lors du chargement du score:', err));
 
-    cookieCount.textContent = String(state.cookies);
+    updateUI();
 
     const saveScore = () => {
       fetch('/users/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score: state.cookies })
+        body: JSON.stringify({ 
+          score: state.cookies,
+          clickUpgrades: state.clickUpgrades
+        })
       }).catch(err => console.error('Erreur lors de la sauvegarde du score:', err));
     };
 
     cookieButton.addEventListener('click', () => {
       state = clickCookie(state);
-      cookieCount.textContent = String(state.cookies);
+      updateUI();
     });
+
+    if (upgradeClickBtn) {
+      upgradeClickBtn.addEventListener('click', () => {
+        state = buyClickUpgrade(state);
+        updateUI();
+      });
+    }
 
     // Periodically save score every 5 seconds
     setInterval(saveScore, 5000);
