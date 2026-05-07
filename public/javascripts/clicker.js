@@ -15,7 +15,8 @@ const ACHIEVEMENTS = [
   { id: 'click_pro', name: 'Super Cliqueur', desc: 'Améliore ton clic 5 fois', icon: '⚡', condition: (state) => state.clickUpgrades >= 5 },
   { id: 'grandma_army', name: 'Armée de mamies', desc: 'Possède 10 Grand-mères', icon: '👵', condition: (state) => state.upgrades.grandma >= 10 },
   { id: 'industrial_revolution', name: 'Révolution Industrielle', desc: 'Possède 5 Usines', icon: '🏭', condition: (state) => state.upgrades.factory >= 5 },
-  { id: 'golden_luck', name: 'Coup de chance', desc: 'Active un multiplicateur doré', icon: '🌟', condition: (state) => state.multiplier > 1 }
+  { id: 'golden_luck', name: 'Coup de chance', desc: 'Active un multiplicateur doré', icon: '🌟', condition: (state) => state.multiplier > 1 },
+  { id: 'prestige_ascendant', name: 'Ascension', desc: 'Atteins ton premier niveau de prestige', icon: '💎', condition: (state) => state.prestigeLevel >= 1 }
 ];
 
 function createGameState() {
@@ -28,6 +29,9 @@ function createGameState() {
     multiplier: 1,
     multiplierTimeLeft: 0,
     unlockedAchievements: [],
+    prestigeLevel: 0,
+    totalClicks: 0,
+    startTime: Date.now(),
     upgrades: {
       cursor: 0,
       grandma: 0,
@@ -45,9 +49,7 @@ function isFiniteNumber(value) {
 }
 
 function toNonNegativeNumber(value, fallback = 0) {
-  if (!isFiniteNumber(value)) {
-    return fallback;
-  }
+  if (!isFiniteNumber(value)) return fallback;
   return value < 0 ? 0 : value;
 }
 
@@ -77,6 +79,7 @@ function normalizeState(state) {
   });
 
   const totalCPS = hasBoughtAnything ? calculatedCPS : toNonNegativeNumber(baseState.cookiesPerSecond, 0);
+  const prestigeBonus = 1 + (toNonNegativeNumber(baseState.prestigeLevel, 0) * 0.1);
 
   return {
     ...baseState,
@@ -88,23 +91,27 @@ function normalizeState(state) {
     cookiesPerClick: 1 + clickUpgrades,
     cookiesPerSecond: totalCPS,
     multiplier: Math.max(1, toNonNegativeNumber(baseState.multiplier, 1)),
-    multiplierTimeLeft: toNonNegativeNumber(baseState.multiplierTimeLeft, 0)
+    multiplierTimeLeft: toNonNegativeNumber(baseState.multiplierTimeLeft, 0),
+    prestigeLevel: toNonNegativeNumber(baseState.prestigeLevel, 0),
+    prestigeBonus: prestigeBonus,
+    totalClicks: toNonNegativeNumber(baseState.totalClicks, 0)
   };
 }
 
 function clickCookie(state) {
   const safeState = normalizeState(state);
-  const earned = safeState.cookiesPerClick * safeState.multiplier;
+  const earned = safeState.cookiesPerClick * safeState.multiplier * safeState.prestigeBonus;
   return {
     ...safeState,
     cookies: safeState.cookies + earned,
-    totalCookiesEarned: safeState.totalCookiesEarned + earned
+    totalCookiesEarned: safeState.totalCookiesEarned + earned,
+    totalClicks: safeState.totalClicks + 1
   };
 }
 
 function addPassiveCookies(state, secondsElapsed) {
   const safeState = normalizeState(state);
-  const earned = safeState.cookiesPerSecond * safeState.multiplier * toNonNegativeNumber(secondsElapsed, 0);
+  const earned = safeState.cookiesPerSecond * safeState.multiplier * safeState.prestigeBonus * toNonNegativeNumber(secondsElapsed, 0);
   return {
     ...safeState,
     cookies: safeState.cookies + earned,
@@ -117,11 +124,7 @@ function buyBuilding(state, id) {
   if (!BUILDINGS[id]) return safeState;
   const cost = getBuildingCost(id, safeState.upgrades[id]);
   if (safeState.cookies < cost) return safeState;
-  
-  const newState = {
-    ...safeState,
-    cookies: safeState.cookies - cost
-  };
+  const newState = { ...safeState, cookies: safeState.cookies - cost };
   newState.upgrades[id] += 1;
   return normalizeState(newState);
 }
@@ -130,12 +133,7 @@ function buyClickUpgrade(state) {
   const safeState = normalizeState(state);
   const cost = getClickUpgradeCost(safeState.clickUpgrades);
   if (safeState.cookies < cost) return safeState;
-  
-  const newState = {
-    ...safeState,
-    cookies: safeState.cookies - cost,
-    clickUpgrades: safeState.clickUpgrades + 1
-  };
+  const newState = { ...safeState, cookies: safeState.cookies - cost, clickUpgrades: safeState.clickUpgrades + 1 };
   return normalizeState(newState);
 }
 
@@ -153,11 +151,9 @@ function getCookiesPerSecond(upgrades) {
   return Object.keys(upgrades).reduce((total, id) => {
     const entry = upgrades[id];
     if (!entry) return total;
-    if (typeof entry === 'object') {
-      return total + (toNonNegativeNumber(entry.count, 0) * toNonNegativeNumber(entry.production, 0));
-    }
-    const production = BUILDINGS[id] ? BUILDINGS[id].production : 0;
-    return total + (toNonNegativeNumber(entry, 0) * production);
+    const count = typeof entry === 'object' ? toNonNegativeNumber(entry.count, 0) : toNonNegativeNumber(entry, 0);
+    const production = typeof entry === 'object' ? toNonNegativeNumber(entry.production, 0) : (BUILDINGS[id] ? BUILDINGS[id].production : 0);
+    return total + (count * production);
   }, 0);
 }
 
@@ -191,9 +187,7 @@ const clickerApi = {
   normalizeState
 };
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = clickerApi;
-}
+if (typeof module !== 'undefined' && module.exports) module.exports = clickerApi;
 
 if (typeof window !== 'undefined') {
   window.Clicker = clickerApi;
@@ -208,7 +202,12 @@ if (typeof window !== 'undefined') {
       multiplierVal: document.getElementById('multiplier-value'),
       multiplierTime: document.getElementById('multiplier-time'),
       notifContainer: document.getElementById('notification-container'),
-      achievementsGrid: document.getElementById('achievements-grid')
+      achievementsGrid: document.getElementById('achievements-grid'),
+      prestigeBonus: document.getElementById('prestige-bonus'),
+      totalClicks: document.getElementById('total-clicks'),
+      playTime: document.getElementById('play-time'),
+      prestigeBtn: document.getElementById('prestige-button'),
+      prestigeCost: document.getElementById('prestige-cost')
     };
 
     if (!elements.cookieBtn) return;
@@ -218,33 +217,17 @@ if (typeof window !== 'undefined') {
     const notify = (title, message, icon = '🏆') => {
       const notif = document.createElement('div');
       notif.className = 'notification';
-      notif.innerHTML = `
-        <div class="notification-icon">${icon}</div>
-        <div class="notification-content">
-          <div class="notification-title">${title}</div>
-          <div class="notification-message">${message}</div>
-        </div>
-      `;
+      notif.innerHTML = `<div class="notification-icon">${icon}</div><div class="notification-content"><div class="notification-title">${title}</div><div class="notification-message">${message}</div></div>`;
       elements.notifContainer.appendChild(notif);
-      setTimeout(() => {
-        notif.classList.add('out');
-        setTimeout(() => notif.remove(), 500);
-      }, 4000);
+      setTimeout(() => { notif.classList.add('out'); setTimeout(() => notif.remove(), 500); }, 4000);
     };
 
     const updateAchievementsUI = () => {
       if (!elements.achievementsGrid) return;
-      elements.achievementsGrid.innerHTML = ACHIEVEMENTS.map(ach => {
-        const isUnlocked = state.unlockedAchievements.includes(ach.id);
-        return `
-          <div class="achievement-badge ${isUnlocked ? 'unlocked' : ''}">
-            ${ach.icon}
-            <div class="achievement-tooltip">
-              <strong>${ach.name}</strong><br>${ach.desc}
-            </div>
-          </div>
-        `;
-      }).join('');
+      elements.achievementsGrid.innerHTML = ACHIEVEMENTS.map(ach => `
+        <div class="achievement-badge ${state.unlockedAchievements.includes(ach.id) ? 'unlocked' : ''}">
+          ${ach.icon}<div class="achievement-tooltip"><strong>${ach.name}</strong><br>${ach.desc}</div>
+        </div>`).join('');
     };
 
     const checkAchievements = () => {
@@ -259,10 +242,10 @@ if (typeof window !== 'undefined') {
 
     const updateUI = () => {
       elements.cookieCount.textContent = Math.floor(state.cookies).toLocaleString();
-      if (elements.cpsCount) elements.cpsCount.textContent = (state.cookiesPerSecond * state.multiplier).toFixed(1).toLocaleString();
-      if (elements.cpcCount) elements.cpcCount.textContent = (state.cookiesPerClick * state.multiplier).toLocaleString();
-
-      // Multiplier
+      const currentCPS = state.cookiesPerSecond * state.multiplier * state.prestigeBonus;
+      if (elements.cpsCount) elements.cpsCount.textContent = currentCPS.toFixed(1).toLocaleString();
+      if (elements.cpcCount) elements.cpcCount.textContent = (state.cookiesPerClick * state.multiplier * state.prestigeBonus).toFixed(1).toLocaleString();
+      
       if (state.multiplierTimeLeft > 0) {
         elements.multiplierIndicator.style.display = 'block';
         elements.multiplierVal.textContent = state.multiplier;
@@ -271,11 +254,28 @@ if (typeof window !== 'undefined') {
         elements.multiplierIndicator.style.display = 'none';
       }
 
-      // Temple Image
       if (state.upgrades.temple > 0) elements.cookieBtn.style.backgroundImage = "url('/images/golden.png')";
 
-      // Upgrade Prices
-      const cpcCost = Math.floor(10 * Math.pow(1.5, state.clickUpgrades));
+      // Stats
+      if (elements.prestigeBonus) elements.prestigeBonus.textContent = ((state.prestigeBonus - 1) * 100).toFixed(0);
+      if (elements.totalClicks) elements.totalClicks.textContent = state.totalClicks.toLocaleString();
+      if (elements.playTime) {
+        const diff = Math.floor((Date.now() - state.startTime) / 1000);
+        const h = Math.floor(diff / 3600);
+        const m = Math.floor((diff % 3600) / 60);
+        const s = diff % 60;
+        elements.playTime.textContent = `${h}h ${m}m ${s}s`;
+      }
+
+      // Prestige Button
+      const nextPrestigeCost = Math.floor(1000000 * Math.pow(10, state.prestigeLevel));
+      if (elements.prestigeBtn) {
+        elements.prestigeCost.textContent = nextPrestigeCost.toLocaleString();
+        elements.prestigeBtn.disabled = state.cookies < nextPrestigeCost;
+      }
+
+      // Shop
+      const cpcCost = getClickUpgradeCost(state.clickUpgrades);
       const cpcBtn = document.getElementById('upgrade-click');
       if (cpcBtn) {
         document.getElementById('upgrade-click-cost').textContent = cpcCost.toLocaleString();
@@ -285,7 +285,7 @@ if (typeof window !== 'undefined') {
 
       Object.keys(BUILDINGS).forEach(id => {
         const btn = document.getElementById(`buy-${id}`);
-        const cost = Math.floor(BUILDINGS[id].cost * Math.pow(1.15, state.upgrades[id]));
+        const cost = getBuildingCost(id, state.upgrades[id]);
         const costEl = document.getElementById(`${id}-price`);
         const countEl = document.getElementById(`${id}-count`);
         if (costEl) costEl.textContent = cost.toLocaleString();
@@ -321,7 +321,22 @@ if (typeof window !== 'undefined') {
           state.clickUpgrades = data.clickUpgrades || 0;
           state.upgrades = data.upgrades || state.upgrades;
           state.unlockedAchievements = data.unlockedAchievements || [];
+          state.prestigeLevel = data.prestigeLevel || 0;
+          state.totalClicks = data.totalClicks || 0;
           state = normalizeState(state);
+
+          // Offline Earnings
+          if (data.lastSaveTime && state.cookiesPerSecond > 0) {
+            const now = Date.now();
+            const elapsed = Math.floor((now - data.lastSaveTime) / 1000);
+            if (elapsed > 60) { // More than 1 minute away
+              const earned = state.cookiesPerSecond * state.multiplier * state.prestigeBonus * elapsed * 0.5; // 50% efficiency
+              state.cookies += earned;
+              state.totalCookiesEarned += earned;
+              notify('Bon retour !', `Tu as gagné ${Math.floor(earned).toLocaleString()} cookies pendant ton absence.`, '🌙');
+            }
+          }
+          
           updateUI();
           updateAchievementsUI();
         }
@@ -332,42 +347,43 @@ if (typeof window !== 'undefined') {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          score: state.cookies,
-          totalCookiesEarned: state.totalCookiesEarned,
-          clickUpgrades: state.clickUpgrades,
-          upgrades: state.upgrades,
-          unlockedAchievements: state.unlockedAchievements
+          score: state.cookies, totalCookiesEarned: state.totalCookiesEarned, 
+          clickUpgrades: state.clickUpgrades, upgrades: state.upgrades, 
+          unlockedAchievements: state.unlockedAchievements, 
+          prestigeLevel: state.prestigeLevel, totalClicks: state.totalClicks
         })
       });
     };
 
-    elements.cookieBtn.addEventListener('click', () => {
-      state = clickCookie(state);
-      checkAchievements();
-      updateUI();
-    });
+    elements.cookieBtn.addEventListener('click', () => { state = clickCookie(state); checkAchievements(); updateUI(); });
+
+    if (elements.prestigeBtn) {
+      elements.prestigeBtn.addEventListener('click', () => {
+        const cost = Math.floor(1000000 * Math.pow(10, state.prestigeLevel));
+        if (state.cookies >= cost && confirm('Voulez-vous ascensionner ? Cela réinitialisera vos cookies et bâtiments, mais vous donnera un bonus permanent de +10%.')) {
+          state.cookies = 0;
+          state.clickUpgrades = 0;
+          Object.keys(state.upgrades).forEach(k => state.upgrades[k] = 0);
+          state.prestigeLevel += 1;
+          state = normalizeState(state);
+          saveScore();
+          updateUI();
+          notify('Ascension réussie !', `Niveau de prestige ${state.prestigeLevel} atteint.`, '💎');
+        }
+      });
+    }
 
     document.addEventListener('click', (e) => {
-      const buildingBtn = e.target.closest('.buy-building');
-      if (buildingBtn) {
-        state = buyBuilding(state, buildingBtn.dataset.buildingId);
-        checkAchievements();
-        updateUI();
-        saveScore();
-      }
-      const upgradeBtn = e.target.closest('#upgrade-click');
-      if (upgradeBtn) {
-        state = buyClickUpgrade(state);
-        checkAchievements();
-        updateUI();
-        saveScore();
-      }
+      const bBtn = e.target.closest('.buy-building');
+      if (bBtn) { state = buyBuilding(state, bBtn.dataset.buildingId); checkAchievements(); updateUI(); saveScore(); }
+      const uBtn = e.target.closest('#upgrade-click');
+      if (uBtn) { state = buyClickUpgrade(state); checkAchievements(); updateUI(); saveScore(); }
     });
 
     setInterval(() => {
       let changed = false;
       if (state.cookiesPerSecond > 0) {
-        const earned = (state.cookiesPerSecond * state.multiplier) / 10;
+        const earned = (state.cookiesPerSecond * state.multiplier * state.prestigeBonus) / 10;
         state.cookies += earned;
         state.totalCookiesEarned += earned;
         changed = true;
@@ -377,10 +393,7 @@ if (typeof window !== 'undefined') {
         if (state.multiplierTimeLeft <= 0) { state.multiplier = 1; state.multiplierTimeLeft = 0; }
         changed = true;
       }
-      if (changed) {
-        checkAchievements();
-        updateUI();
-      }
+      if (changed) { checkAchievements(); updateUI(); }
     }, 100);
 
     setInterval(saveScore, 10000);

@@ -91,6 +91,32 @@
         </div>
       </section>
 
+      <!-- Advanced Stats & Prestige -->
+      <section class="advanced-panel">
+        <div class="stats-dashboard">
+          <div class="stat-item">
+            <span class="stat-label">Bonus Prestige</span>
+            <span class="stat-value">+<span id="prestige-bonus">0</span>%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Clics Totaux</span>
+            <span id="total-clicks" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Temps de Jeu</span>
+            <span id="play-time" class="stat-value">0h 0m 0s</span>
+          </div>
+        </div>
+        
+        <button id="prestige-button" class="prestige-button" disabled>
+          <div class="prestige-info">
+            <span class="prestige-title">✨ Ascension ✨</span>
+            <span class="prestige-desc">Reset contre un bonus permanent</span>
+          </div>
+          <span class="prestige-cost"><span id="prestige-cost">1,000,000</span> 🍪</span>
+        </button>
+      </section>
+
       <button id="cookie-button" class="cookie-button" type="button" aria-label="Cliquer sur le cookie">
         <span class="cookie-fallback" aria-hidden="true">Cookie</span>
       </button>
