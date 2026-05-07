@@ -4,12 +4,12 @@ var bcrypt = require('bcryptjs');
 var db = require('../db');
 
 /* GET registration page */
-router.get('/register', function(req, res) {
+router.get('/register', function (req, res) {
   res.render('register', { title: 'Inscription', error: null });
 });
 
 /* POST registration */
-router.post('/register', function(req, res) {
+router.post('/register', function (req, res) {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.render('register', { title: 'Inscription', error: 'Veuillez remplir tous les champs.' });
@@ -29,12 +29,12 @@ router.post('/register', function(req, res) {
 });
 
 /* GET login page */
-router.get('/login', function(req, res) {
+router.get('/login', function (req, res) {
   res.render('login', { title: 'Connexion', error: null });
 });
 
 /* POST login */
-router.post('/login', function(req, res) {
+router.post('/login', function (req, res) {
   const { username, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
 
@@ -48,21 +48,21 @@ router.post('/login', function(req, res) {
 });
 
 /* POST logout */
-router.post('/logout', function(req, res) {
+router.post('/logout', function (req, res) {
   req.session.destroy();
   res.redirect('/');
 });
 
 /* POST update score */
-router.post('/score', function(req, res) {
+router.post('/score', function (req, res) {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const { score, clickUpgrades } = req.body;
+  const { score, clickUpgrades, cookiesPerSecond } = req.body;
   try {
-    const stmt = db.prepare('UPDATE users SET score = ?, click_upgrades = ? WHERE id = ?');
-    stmt.run(score, clickUpgrades, req.session.userId);
+    const stmt = db.prepare('UPDATE users SET score = ?, click_upgrades = ?, cookies_per_second = ? WHERE id = ?');
+    stmt.run(score, clickUpgrades || 0, cookiesPerSecond || 0, req.session.userId);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
@@ -70,17 +70,17 @@ router.post('/score', function(req, res) {
 });
 
 /* GET current score */
-router.get('/score', function(req, res) {
+router.get('/score', function (req, res) {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const user = db.prepare('SELECT score, click_upgrades FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT score, click_upgrades, cookies_per_second FROM users WHERE id = ?').get(req.session.userId);
   res.json({ 
     score: user ? user.score : 0,
-    clickUpgrades: user ? user.click_upgrades : 0
+    clickUpgrades: user ? user.click_upgrades : 0,
+    cookiesPerSecond: user ? user.cookies_per_second : 0
   });
 });
 
 module.exports = router;
-

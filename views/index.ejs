@@ -81,6 +81,10 @@
           <span class="score-label">Par clic</span>
           <span id="cookies-per-click" class="score-value">1</span>
         </div>
+        <div class="score-group">
+          <span class="score-label">Cookies / sec</span>
+          <span id="cps-count" class="score-value">0</span>
+        </div>
       </section>
 
       <button id="cookie-button" class="cookie-button" type="button" aria-label="Cliquer sur le cookie">
@@ -90,6 +94,7 @@
       <section class="upgrades-panel">
         <h2 class="section-title">Améliorations</h2>
         <div class="upgrades-list">
+          <!-- Super Click Upgrade -->
           <button id="upgrade-click" class="upgrade-item" type="button">
             <div class="upgrade-icon-container">
               <img src="/images/click_upgrade.png" alt="Clic" class="upgrade-icon">
@@ -103,6 +108,20 @@
               <span class="upgrade-count">Niv. <span id="upgrade-click-count">0</span></span>
             </div>
           </button>
+
+          <!-- Auto Clicker Upgrade -->
+          <button id="buy-autoclicker" class="upgrade-item" type="button">
+            <div class="upgrade-icon-container">
+              <span style="font-size: 24px;">🤖</span>
+            </div>
+            <div class="upgrade-info">
+              <span class="upgrade-name">Auto-Clicker</span>
+              <span class="upgrade-desc">Produit 1 cookie par seconde</span>
+            </div>
+            <div class="upgrade-meta">
+              <span class="upgrade-cost"><span id="autoclicker-price">15</span> 🍪</span>
+            </div>
+          </button>
         </div>
       </section>
     </main>
@@ -110,4 +129,3 @@
     <script src='/javascripts/clicker.js'></script>
   </body>
 </html>
-

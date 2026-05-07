@@ -76,6 +76,11 @@ function getClickUpgradeCost(count) {
   return Math.floor(10 * Math.pow(1.5, safeCount));
 }
 
+function getAutoClickerCost(cps) {
+  const safeCPS = toNonNegativeNumber(cps, 0);
+  return Math.floor(15 * Math.pow(1.15, safeCPS));
+}
+
 function buyClickUpgrade(state) {
   const safeState = normalizeState(state);
   const cost = getClickUpgradeCost(safeState.clickUpgrades);
@@ -89,6 +94,21 @@ function buyClickUpgrade(state) {
     ...newState,
     clickUpgrades: newState.clickUpgrades + 1,
     cookiesPerClick: 1 + (newState.clickUpgrades + 1)
+  };
+}
+
+function buyAutoClicker(state) {
+  const safeState = normalizeState(state);
+  const cost = getAutoClickerCost(safeState.cookiesPerSecond);
+
+  if (!canAfford(safeState.cookies, cost)) {
+    return safeState;
+  }
+
+  const newState = spendCookies(safeState, cost);
+  return {
+    ...newState,
+    cookiesPerSecond: newState.cookiesPerSecond + 1
   };
 }
 
@@ -117,7 +137,9 @@ const clickerApi = {
   spendCookies,
   getCookiesPerSecond,
   getClickUpgradeCost,
-  buyClickUpgrade
+  getAutoClickerCost,
+  buyClickUpgrade,
+  buyAutoClicker
 };
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -130,10 +152,16 @@ if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     const cookieButton = document.getElementById('cookie-button');
     const cookieCount = document.getElementById('cookie-count');
+    const cpsDisplay = document.getElementById('cps-count');
+    const cookiesPerClickDisplay = document.getElementById('cookies-per-click');
+
+    // Upgrade buttons and meta
     const upgradeClickBtn = document.getElementById('upgrade-click');
     const upgradeClickCost = document.getElementById('upgrade-click-cost');
     const upgradeClickCount = document.getElementById('upgrade-click-count');
-    const cookiesPerClickDisplay = document.getElementById('cookies-per-click');
+
+    const buyAutoClickerBtn = document.getElementById('buy-autoclicker');
+    const autoClickerPrice = document.getElementById('autoclicker-price');
 
     if (!cookieButton || !cookieCount) {
       return;
@@ -144,21 +172,29 @@ if (typeof window !== 'undefined') {
     const updateUI = () => {
       cookieCount.textContent = Math.floor(state.cookies).toLocaleString();
       
-      if (upgradeClickCost) {
-        const cost = getClickUpgradeCost(state.clickUpgrades);
-        upgradeClickCost.textContent = cost.toLocaleString();
-        
-        if (upgradeClickBtn) {
-          upgradeClickBtn.disabled = !canAfford(state.cookies, cost);
-        }
-      }
-      
-      if (upgradeClickCount) {
-        upgradeClickCount.textContent = state.clickUpgrades;
+      if (cpsDisplay) {
+        cpsDisplay.textContent = state.cookiesPerSecond.toLocaleString();
       }
       
       if (cookiesPerClickDisplay) {
         cookiesPerClickDisplay.textContent = state.cookiesPerClick;
+      }
+
+      // Update Click Upgrade UI
+      if (upgradeClickCost) {
+        const cost = getClickUpgradeCost(state.clickUpgrades);
+        upgradeClickCost.textContent = cost.toLocaleString();
+        if (upgradeClickBtn) upgradeClickBtn.disabled = !canAfford(state.cookies, cost);
+      }
+      if (upgradeClickCount) {
+        upgradeClickCount.textContent = state.clickUpgrades;
+      }
+
+      // Update Auto-Clicker UI
+      if (autoClickerPrice) {
+        const cost = getAutoClickerCost(state.cookiesPerSecond);
+        autoClickerPrice.textContent = cost.toLocaleString();
+        if (buyAutoClickerBtn) buyAutoClickerBtn.disabled = !canAfford(state.cookies, cost);
       }
     };
 
@@ -169,6 +205,7 @@ if (typeof window !== 'undefined') {
         if (data) {
           state.cookies = data.score;
           state.clickUpgrades = data.clickUpgrades || 0;
+          state.cookiesPerSecond = data.cookiesPerSecond || 0;
           state = normalizeState(state);
           updateUI();
         }
@@ -183,7 +220,8 @@ if (typeof window !== 'undefined') {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           score: state.cookies,
-          clickUpgrades: state.clickUpgrades
+          clickUpgrades: state.clickUpgrades,
+          cookiesPerSecond: state.cookiesPerSecond
         })
       }).catch(err => console.error('Erreur lors de la sauvegarde du score:', err));
     };
@@ -197,14 +235,30 @@ if (typeof window !== 'undefined') {
       upgradeClickBtn.addEventListener('click', () => {
         state = buyClickUpgrade(state);
         updateUI();
+        saveScore();
       });
     }
 
-    // Periodically save score every 5 seconds
-    setInterval(saveScore, 5000);
+    if (buyAutoClickerBtn) {
+      buyAutoClickerBtn.addEventListener('click', () => {
+        state = buyAutoClicker(state);
+        updateUI();
+        saveScore();
+      });
+    }
+
+    // Passive production interval (every 100ms for smoothness)
+    setInterval(() => {
+      if (state.cookiesPerSecond > 0) {
+        state.cookies += state.cookiesPerSecond / 10;
+        updateUI();
+      }
+    }, 100);
+
+    // Periodically save score every 10 seconds
+    setInterval(saveScore, 10000);
 
     // Also save on page unload
     window.addEventListener('beforeunload', saveScore);
   });
 }
-
