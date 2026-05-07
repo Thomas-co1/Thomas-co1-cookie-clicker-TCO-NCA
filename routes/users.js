@@ -59,18 +59,21 @@ router.post('/score', function (req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const { score, clickUpgrades, cookiesPerSecond, upgrades } = req.body;
+  const { score, totalCookiesEarned, clickUpgrades, cookiesPerSecond, upgrades, unlockedAchievements } = req.body;
   try {
-    const stmt = db.prepare('UPDATE users SET score = ?, click_upgrades = ?, cookies_per_second = ?, upgrades = ? WHERE id = ?');
+    const stmt = db.prepare('UPDATE users SET score = ?, total_cookies_earned = ?, click_upgrades = ?, cookies_per_second = ?, upgrades = ?, achievements = ? WHERE id = ?');
     stmt.run(
       score, 
+      totalCookiesEarned || score || 0,
       clickUpgrades || 0, 
       cookiesPerSecond || 0, 
-      JSON.stringify(upgrades || {}), 
+      JSON.stringify(upgrades || {}),
+      JSON.stringify(unlockedAchievements || []),
       req.session.userId
     );
     res.json({ success: true });
   } catch (err) {
+    console.error('Save error:', err);
     res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
   }
 });
@@ -81,20 +84,25 @@ router.get('/score', function (req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const user = db.prepare('SELECT score, click_upgrades, cookies_per_second, upgrades FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT score, total_cookies_earned, click_upgrades, cookies_per_second, upgrades, achievements FROM users WHERE id = ?').get(req.session.userId);
   
   let upgrades = {};
+  let unlockedAchievements = [];
   try {
     upgrades = JSON.parse(user ? user.upgrades : '{}');
+    unlockedAchievements = JSON.parse(user ? user.achievements : '[]');
   } catch (e) {
     upgrades = {};
+    unlockedAchievements = [];
   }
 
   res.json({ 
     score: user ? user.score : 0,
+    totalCookiesEarned: user ? user.total_cookies_earned : 0,
     clickUpgrades: user ? user.click_upgrades : 0,
     cookiesPerSecond: user ? user.cookies_per_second : 0,
-    upgrades: upgrades
+    upgrades: upgrades,
+    unlockedAchievements: unlockedAchievements
   });
 });
 

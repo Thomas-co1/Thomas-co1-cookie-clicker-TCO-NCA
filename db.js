@@ -21,7 +21,9 @@ db.exec(`
 const columnsToAdd = [
   { name: 'click_upgrades', type: 'INTEGER DEFAULT 0' },
   { name: 'cookies_per_second', type: 'INTEGER DEFAULT 0' },
-  { name: 'upgrades', type: "TEXT DEFAULT '{}'" }
+  { name: 'upgrades', type: "TEXT DEFAULT '{}'" },
+  { name: 'total_cookies_earned', type: 'REAL DEFAULT 0' },
+  { name: 'achievements', type: "TEXT DEFAULT '[]'" }
 ];
 
 columnsToAdd.forEach(column => {
