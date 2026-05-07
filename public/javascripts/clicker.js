@@ -94,6 +94,7 @@ const clickerApi = {
   getCookiesPerSecond
 };
 
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = clickerApi;
 }
@@ -104,6 +105,13 @@ if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     const cookieButton = document.getElementById('cookie-button');
     const cookieCount = document.getElementById('cookie-count');
+    const cpsDisplay = document.getElementById('cps-count');
+    
+    // Elements for upgrades
+    const buyAutoClickerBtn = document.getElementById('buy-autoclicker');
+    const autoClickerPrice = document.getElementById('autoclicker-price');
+    const buySuperClickerBtn = document.getElementById('buy-superclicker');
+    const superClickerPrice = document.getElementById('superclicker-price');
 
     if (!cookieButton || !cookieCount) {
       return;
@@ -111,37 +119,81 @@ if (typeof window !== 'undefined') {
 
     let state = createGameState();
 
+    const calculatePrice = (basePrice, currentCPS) => {
+      // Very simple approximation: since we don't store individual upgrade counts, 
+      // we use CPS as a proxy for total upgrades.
+      // But it's better to store counts. For now, we'll use a formula based on total CPS.
+      return Math.floor(basePrice * Math.pow(1.15, currentCPS));
+    };
+
+    const updateUI = () => {
+      cookieCount.textContent = Math.floor(state.cookies).toLocaleString();
+      if (cpsDisplay) cpsDisplay.textContent = state.cookiesPerSecond.toLocaleString();
+      
+      // Update Auto-Clicker price and button
+      if (buyAutoClickerBtn && autoClickerPrice) {
+        // Here we use a simplified version where CPS = number of auto-clickers
+        // This isn't perfect if there are multiple types, but it's a start.
+        const price = Math.floor(15 * Math.pow(1.15, state.cookiesPerSecond));
+        autoClickerPrice.textContent = price;
+        buyAutoClickerBtn.disabled = state.cookies < price;
+      }
+    };
+
     // Fetch initial score from server
     fetch('/users/score')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) {
           state.cookies = data.score;
-          cookieCount.textContent = String(state.cookies);
+          state.cookiesPerSecond = data.cookiesPerSecond || 0;
+          updateUI();
         }
       })
       .catch(err => console.error('Erreur lors du chargement du score:', err));
 
-    cookieCount.textContent = String(state.cookies);
+    updateUI();
 
     const saveScore = () => {
       fetch('/users/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score: state.cookies })
+        body: JSON.stringify({ 
+          score: state.cookies,
+          cookiesPerSecond: state.cookiesPerSecond
+        })
       }).catch(err => console.error('Erreur lors de la sauvegarde du score:', err));
     };
 
     cookieButton.addEventListener('click', () => {
       state = clickCookie(state);
-      cookieCount.textContent = String(state.cookies);
+      updateUI();
     });
 
-    // Periodically save score every 5 seconds
-    setInterval(saveScore, 5000);
+    if (buyAutoClickerBtn) {
+      buyAutoClickerBtn.addEventListener('click', () => {
+        const price = Math.floor(15 * Math.pow(1.15, state.cookiesPerSecond));
+        if (state.cookies >= price) {
+          state.cookies -= price;
+          state.cookiesPerSecond += 1;
+          updateUI();
+          saveScore();
+        }
+      });
+    }
+
+    // Passive production interval (every 100ms for smoothness)
+    setInterval(() => {
+      if (state.cookiesPerSecond > 0) {
+        state.cookies += state.cookiesPerSecond / 10;
+        updateUI();
+      }
+    }, 100);
+
+    // Periodically save score every 10 seconds
+    setInterval(saveScore, 10000);
 
     // Also save on page unload
     window.addEventListener('beforeunload', saveScore);
   });
 }
-

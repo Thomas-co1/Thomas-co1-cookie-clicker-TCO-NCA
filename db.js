@@ -10,8 +10,17 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    score INTEGER DEFAULT 0
+    score INTEGER DEFAULT 0,
+    cookies_per_second INTEGER DEFAULT 0
   )
 `);
+
+// Add column if it doesn't exist
+try {
+  db.exec('ALTER TABLE users ADD COLUMN cookies_per_second INTEGER DEFAULT 0');
+} catch (e) {
+  // Column already exists
+}
+
 
 module.exports = db;

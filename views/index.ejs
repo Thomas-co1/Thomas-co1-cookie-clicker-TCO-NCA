@@ -75,11 +75,28 @@
       <section class="score-card" aria-live="polite">
         <span class="score-label">Cookies</span>
         <span id="cookie-count" class="score-value">0</span>
+        <div class="cps-display">
+          <span id="cps-count">0</span> cookies / sec
+        </div>
       </section>
 
       <button id="cookie-button" class="cookie-button" type="button" aria-label="Cliquer sur le cookie">
         <span class="cookie-fallback" aria-hidden="true">Cookie</span>
       </button>
+
+      <section class="upgrades">
+        <h2 class="section-title">Améliorations</h2>
+        <div class="upgrade-item">
+          <div class="upgrade-info">
+            <span class="upgrade-name">Auto-Clicker</span>
+            <span class="upgrade-desc">Produit 1 cookie par seconde</span>
+          </div>
+          <button id="buy-autoclicker" class="buy-button" disabled>
+            Acheter (<span id="autoclicker-price">15</span>)
+          </button>
+        </div>
+      </section>
+
     </main>
 
     <script src='/javascripts/clicker.js'></script>
