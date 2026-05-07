@@ -93,3 +93,83 @@ body {
   color: rgba(47, 27, 12, 0.65);
   line-height: 1;
 }
+
+/* CPS Display */
+.cps-display {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+/* Upgrades Section */
+.upgrades {
+  width: 100%;
+  background: var(--panel);
+  border: 2px solid var(--panel-border);
+  border-radius: 16px;
+  padding: 18px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+
+.section-title {
+  margin: 0 0 16px 0;
+  font-size: 1.2rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.upgrade-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upgrade-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upgrade-name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.upgrade-desc {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.buy-button {
+  background: var(--accent);
+  color: #2f1b0c;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.buy-button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.buy-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.buy-button:disabled {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+}
+

@@ -111,37 +111,78 @@ if (typeof window !== 'undefined') {
 
     let state = createGameState();
 
+
+    const cpsDisplay = document.getElementById('cps-count');
+    const buyAutoClickerBtn = document.getElementById('buy-autoclicker');
+    const autoClickerPrice = document.getElementById('autoclicker-price');
+
+
+    const updateUI = () => {
+      cookieCount.textContent = Math.floor(state.cookies).toLocaleString();
+      if (cpsDisplay) cpsDisplay.textContent = state.cookiesPerSecond.toLocaleString();
+      if (buyAutoClickerBtn && autoClickerPrice) {
+        const nextPrice = Math.floor(15 * Math.pow(1.15, state.cookiesPerSecond));
+        autoClickerPrice.textContent = nextPrice;
+        buyAutoClickerBtn.disabled = state.cookies < nextPrice;
+      }
+    };
+
     // Fetch initial score from server
     fetch('/users/score')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) {
           state.cookies = data.score;
-          cookieCount.textContent = String(state.cookies);
+          state.cookiesPerSecond = data.cookiesPerSecond || 0;
+          updateUI();
         }
       })
       .catch(err => console.error('Erreur lors du chargement du score:', err));
 
-    cookieCount.textContent = String(state.cookies);
+    updateUI();
 
     const saveScore = () => {
       fetch('/users/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score: state.cookies })
+        body: JSON.stringify({ 
+          score: state.cookies,
+          cookiesPerSecond: state.cookiesPerSecond
+        })
       }).catch(err => console.error('Erreur lors de la sauvegarde du score:', err));
     };
 
     cookieButton.addEventListener('click', () => {
       state = clickCookie(state);
-      cookieCount.textContent = String(state.cookies);
+      updateUI();
     });
 
-    // Periodically save score every 5 seconds
-    setInterval(saveScore, 5000);
+    if (buyAutoClickerBtn) {
+      buyAutoClickerBtn.addEventListener('click', () => {
+        const price = Math.floor(15 * Math.pow(1.15, state.cookiesPerSecond));
+        if (state.cookies >= price) {
+          state.cookies -= price;
+          state.cookiesPerSecond += 1;
+          updateUI();
+          saveScore();
+        }
+      });
+    }
+
+    // Passive production interval (every 100ms for smoothness)
+    setInterval(() => {
+      if (state.cookiesPerSecond > 0) {
+        state.cookies += state.cookiesPerSecond / 10;
+        updateUI();
+      }
+    }, 100);
+
+    // Periodically save score every 10 seconds
+    setInterval(saveScore, 10000);
 
     // Also save on page unload
     window.addEventListener('beforeunload', saveScore);
   });
 }
+
 

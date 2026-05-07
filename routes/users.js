@@ -59,10 +59,10 @@ router.post('/score', function (req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const { score } = req.body;
+  const { score, cookiesPerSecond } = req.body;
   try {
-    const stmt = db.prepare('UPDATE users SET score = ? WHERE id = ?');
-    stmt.run(score, req.session.userId);
+    const stmt = db.prepare('UPDATE users SET score = ?, cookies_per_second = ? WHERE id = ?');
+    stmt.run(score, cookiesPerSecond || 0, req.session.userId);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
@@ -75,9 +75,13 @@ router.get('/score', function (req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const user = db.prepare('SELECT score FROM users WHERE id = ?').get(req.session.userId);
-  res.json({ score: user ? user.score : 0 });
+  const user = db.prepare('SELECT score, cookies_per_second FROM users WHERE id = ?').get(req.session.userId);
+  res.json({ 
+    score: user ? user.score : 0,
+    cookiesPerSecond: user ? user.cookies_per_second : 0
+  });
 });
+
 
 module.exports = router;
 
