@@ -11,16 +11,19 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     score INTEGER DEFAULT 0,
-    cookies_per_second INTEGER DEFAULT 0
+    cookies_per_second INTEGER DEFAULT 0,
+    upgrades TEXT DEFAULT '{}'
   )
 `);
 
-// Add column if it doesn't exist
+// Add columns if they don't exist
 try {
   db.exec('ALTER TABLE users ADD COLUMN cookies_per_second INTEGER DEFAULT 0');
-} catch (e) {
-  // Column already exists
-}
+} catch (e) {}
+try {
+  db.exec("ALTER TABLE users ADD COLUMN upgrades TEXT DEFAULT '{}'");
+} catch (e) {}
+
 
 
 module.exports = db;

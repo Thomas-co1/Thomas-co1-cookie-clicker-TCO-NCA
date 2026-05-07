@@ -2,7 +2,15 @@ function createGameState() {
   return {
     cookies: 0,
     cookiesPerClick: 1,
-    cookiesPerSecond: 0
+    cookiesPerSecond: 0,
+    upgrades: {
+      grandma: 0,
+      farm: 0,
+      mine: 0,
+      factory: 0,
+      bank: 0,
+      temple: 0
+    }
   };
 }
 
@@ -25,7 +33,8 @@ function normalizeState(state) {
     ...baseState,
     cookies: toNonNegativeNumber(baseState.cookies, 0),
     cookiesPerClick: toNonNegativeNumber(baseState.cookiesPerClick, 1),
-    cookiesPerSecond: toNonNegativeNumber(baseState.cookiesPerSecond, 0)
+    cookiesPerSecond: toNonNegativeNumber(baseState.cookiesPerSecond, 0),
+    upgrades: baseState.upgrades || { grandma: 0, farm: 0, mine: 0, factory: 0, bank: 0, temple: 0 }
   };
 }
 
@@ -68,20 +77,34 @@ function spendCookies(state, cost) {
   };
 }
 
+const upgradeDefinitions = {
+  grandma: { basePrice: 15, production: 1, name: 'Grand-mère', desc: 'Une gentille grand-mère pour cuire des cookies.' },
+  farm: { basePrice: 100, production: 8, name: 'Ferme', desc: 'Fait pousser des cookies à partir de graines de cookies.' },
+  mine: { basePrice: 500, production: 47, name: 'Mine', desc: 'Extrait de la pâte à cookies des profondeurs de la terre.' },
+  factory: { basePrice: 3000, production: 260, name: 'Usine', desc: 'Production massive de cookies.' },
+  bank: { basePrice: 10000, production: 1400, name: 'Banque', desc: 'Génère des cookies à partir d\'intérêts.' },
+  temple: { basePrice: 50000, production: 7800, name: 'Temple', desc: 'Invoque la toute-puissance des cookies.' }
+};
+
+
 function getCookiesPerSecond(upgrades) {
   if (!upgrades || typeof upgrades !== 'object') {
     return 0;
   }
 
-  return Object.values(upgrades).reduce((total, upgrade) => {
-    if (!upgrade || typeof upgrade !== 'object') {
-      return total;
+  return Object.entries(upgrades).reduce((total, [id, data]) => {
+    let count = 0;
+    let rate = 0;
+
+    if (typeof data === 'number') {
+      count = toNonNegativeNumber(data, 0);
+      rate = (upgradeDefinitions[id] && upgradeDefinitions[id].production) || 0;
+    } else if (data && typeof data === 'object') {
+      count = toNonNegativeNumber(data.count, 0);
+      rate = toNonNegativeNumber(data.production, (upgradeDefinitions[id] && upgradeDefinitions[id].production) || 0);
     }
 
-    const count = toNonNegativeNumber(upgrade.count, 0);
-    const production = toNonNegativeNumber(upgrade.production, 0);
-
-    return total + (count * production);
+    return total + (count * rate);
   }, 0);
 }
 
@@ -94,7 +117,6 @@ const clickerApi = {
   getCookiesPerSecond
 };
 
-
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = clickerApi;
 }
@@ -106,12 +128,6 @@ if (typeof window !== 'undefined') {
     const cookieButton = document.getElementById('cookie-button');
     const cookieCount = document.getElementById('cookie-count');
     const cpsDisplay = document.getElementById('cps-count');
-    
-    // Elements for upgrades
-    const buyAutoClickerBtn = document.getElementById('buy-autoclicker');
-    const autoClickerPrice = document.getElementById('autoclicker-price');
-    const buySuperClickerBtn = document.getElementById('buy-superclicker');
-    const superClickerPrice = document.getElementById('superclicker-price');
 
     if (!cookieButton || !cookieCount) {
       return;
@@ -119,25 +135,34 @@ if (typeof window !== 'undefined') {
 
     let state = createGameState();
 
-    const calculatePrice = (basePrice, currentCPS) => {
-      // Very simple approximation: since we don't store individual upgrade counts, 
-      // we use CPS as a proxy for total upgrades.
-      // But it's better to store counts. For now, we'll use a formula based on total CPS.
-      return Math.floor(basePrice * Math.pow(1.15, currentCPS));
+    const getPrice = (id) => {
+      const def = upgradeDefinitions[id];
+      const count = state.upgrades[id] || 0;
+      return Math.floor(def.basePrice * Math.pow(1.10, count));
     };
+
 
     const updateUI = () => {
       cookieCount.textContent = Math.floor(state.cookies).toLocaleString();
       if (cpsDisplay) cpsDisplay.textContent = state.cookiesPerSecond.toLocaleString();
-      
-      // Update Auto-Clicker price and button
-      if (buyAutoClickerBtn && autoClickerPrice) {
-        // Here we use a simplified version where CPS = number of auto-clickers
-        // This isn't perfect if there are multiple types, but it's a start.
-        const price = Math.floor(15 * Math.pow(1.15, state.cookiesPerSecond));
-        autoClickerPrice.textContent = price;
-        buyAutoClickerBtn.disabled = state.cookies < price;
+
+      // Golden Cookie Effect
+      if (state.upgrades.temple > 0) {
+        cookieButton.classList.add('golden-cookie');
+      } else {
+        cookieButton.classList.remove('golden-cookie');
       }
+
+      Object.keys(upgradeDefinitions).forEach(id => {
+        const btn = document.getElementById(`buy-${id}`);
+        const priceSpan = document.getElementById(`${id}-price`);
+        const countSpan = document.getElementById(`${id}-count`);
+        
+        const price = getPrice(id);
+        if (priceSpan) priceSpan.textContent = price.toLocaleString();
+        if (countSpan) countSpan.textContent = (state.upgrades[id] || 0).toLocaleString();
+        if (btn) btn.disabled = state.cookies < price;
+      });
     };
 
     // Fetch initial score from server
@@ -146,7 +171,9 @@ if (typeof window !== 'undefined') {
       .then(data => {
         if (data) {
           state.cookies = data.score;
-          state.cookiesPerSecond = data.cookiesPerSecond || 0;
+          // Clean legacy upgrades if they exist and merge with new ones
+          state.upgrades = { ...createGameState().upgrades, ...(data.upgrades || {}) };
+          state.cookiesPerSecond = getCookiesPerSecond(state.upgrades);
           updateUI();
         }
       })
@@ -160,7 +187,8 @@ if (typeof window !== 'undefined') {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           score: state.cookies,
-          cookiesPerSecond: state.cookiesPerSecond
+          cookiesPerSecond: state.cookiesPerSecond,
+          upgrades: state.upgrades
         })
       }).catch(err => console.error('Erreur lors de la sauvegarde du score:', err));
     };
@@ -170,17 +198,22 @@ if (typeof window !== 'undefined') {
       updateUI();
     });
 
-    if (buyAutoClickerBtn) {
-      buyAutoClickerBtn.addEventListener('click', () => {
-        const price = Math.floor(15 * Math.pow(1.15, state.cookiesPerSecond));
-        if (state.cookies >= price) {
-          state.cookies -= price;
-          state.cookiesPerSecond += 1;
-          updateUI();
-          saveScore();
-        }
-      });
-    }
+    // Handle upgrade purchases
+    Object.keys(upgradeDefinitions).forEach(id => {
+      const btn = document.getElementById(`buy-${id}`);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const price = getPrice(id);
+          if (state.cookies >= price) {
+            state.cookies -= price;
+            state.upgrades[id] = (state.upgrades[id] || 0) + 1;
+            state.cookiesPerSecond = getCookiesPerSecond(state.upgrades);
+            updateUI();
+            saveScore();
+          }
+        });
+      }
+    });
 
     // Passive production interval (every 100ms for smoothness)
     setInterval(() => {
