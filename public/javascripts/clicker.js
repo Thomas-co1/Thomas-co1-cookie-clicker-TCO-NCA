@@ -110,11 +110,38 @@ if (typeof window !== 'undefined') {
     }
 
     let state = createGameState();
+
+    // Fetch initial score from server
+    fetch('/users/score')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          state.cookies = data.score;
+          cookieCount.textContent = String(state.cookies);
+        }
+      })
+      .catch(err => console.error('Erreur lors du chargement du score:', err));
+
     cookieCount.textContent = String(state.cookies);
+
+    const saveScore = () => {
+      fetch('/users/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score: state.cookies })
+      }).catch(err => console.error('Erreur lors de la sauvegarde du score:', err));
+    };
 
     cookieButton.addEventListener('click', () => {
       state = clickCookie(state);
       cookieCount.textContent = String(state.cookies);
     });
+
+    // Periodically save score every 5 seconds
+    setInterval(saveScore, 5000);
+
+    // Also save on page unload
+    window.addEventListener('beforeunload', saveScore);
   });
 }
+
