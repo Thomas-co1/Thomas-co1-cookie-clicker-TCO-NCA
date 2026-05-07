@@ -3,8 +3,71 @@
   <head>
     <title><%= title %></title>
     <link rel='stylesheet' href='/stylesheets/style.css' />
+    <style>
+      .user-header {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 8px 16px;
+        border-radius: 50px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .username {
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+      .logout-btn {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background 0.3s;
+      }
+      .logout-btn:hover {
+        background: rgba(239, 68, 68, 0.1);
+      }
+      .auth-links {
+        display: flex;
+        gap: 12px;
+      }
+      .auth-link {
+        color: #6366f1;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+      .auth-link:hover {
+        text-decoration: underline;
+      }
+    </style>
   </head>
   <body>
+    <header class="user-header">
+      <% if (user) { %>
+        <span class="username"><%= user.username %></span>
+        <form action="/users/logout" method="POST" style="margin: 0;">
+          <button type="submit" class="logout-btn">Déconnexion</button>
+        </form>
+      <% } else { %>
+        <div class="auth-links">
+          <a href="/users/login" class="auth-link">Connexion</a>
+          <a href="/users/register" class="auth-link">Inscription</a>
+        </div>
+      <% } %>
+    </header>
+
     <main class="layout">
       <h1 class="title"><%= title %></h1>
       <p class="subtitle">Clique sur le cookie pour gagner des points.</p>
@@ -22,3 +85,4 @@
     <script src='/javascripts/clicker.js'></script>
   </body>
 </html>
+
