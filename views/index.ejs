@@ -73,13 +73,38 @@
       <p class="subtitle">Clique sur le cookie pour gagner des points.</p>
 
       <section class="score-card" aria-live="polite">
-        <span class="score-label">Cookies</span>
-        <span id="cookie-count" class="score-value">0</span>
+        <div class="score-group">
+          <span class="score-label">Cookies</span>
+          <span id="cookie-count" class="score-value">0</span>
+        </div>
+        <div class="score-group">
+          <span class="score-label">Par clic</span>
+          <span id="cookies-per-click" class="score-value">1</span>
+        </div>
       </section>
 
       <button id="cookie-button" class="cookie-button" type="button" aria-label="Cliquer sur le cookie">
         <span class="cookie-fallback" aria-hidden="true">Cookie</span>
       </button>
+
+      <section class="upgrades-panel">
+        <h2 class="section-title">Améliorations</h2>
+        <div class="upgrades-list">
+          <button id="upgrade-click" class="upgrade-item" type="button">
+            <div class="upgrade-icon-container">
+              <img src="/images/click_upgrade.png" alt="Clic" class="upgrade-icon">
+            </div>
+            <div class="upgrade-info">
+              <span class="upgrade-name">Super Clic</span>
+              <span class="upgrade-desc">Augmente les cookies par clic de 1</span>
+            </div>
+            <div class="upgrade-meta">
+              <span class="upgrade-cost"><span id="upgrade-click-cost">10</span> 🍪</span>
+              <span class="upgrade-count">Niv. <span id="upgrade-click-count">0</span></span>
+            </div>
+          </button>
+        </div>
+      </section>
     </main>
 
     <script src='/javascripts/clicker.js'></script>
