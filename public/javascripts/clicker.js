@@ -14,6 +14,8 @@ function createGameState() {
     cookiesPerClick: 1,
     cookiesPerSecond: 0,
     clickUpgrades: 0,
+    multiplier: 1,
+    multiplierTimeLeft: 0,
     upgrades: {
       cursor: 0,
       grandma: 0,
@@ -34,7 +36,6 @@ function toNonNegativeNumber(value, fallback = 0) {
   if (!isFiniteNumber(value)) {
     return fallback;
   }
-
   return value < 0 ? 0 : value;
 }
 
@@ -76,43 +77,37 @@ function normalizeState(state) {
     clickUpgrades: clickUpgrades,
     upgrades: upgrades,
     cookiesPerClick: 1 + clickUpgrades,
-    cookiesPerSecond: totalCPS
+    cookiesPerSecond: totalCPS,
+    multiplier: Math.max(1, toNonNegativeNumber(baseState.multiplier, 1)),
+    multiplierTimeLeft: toNonNegativeNumber(baseState.multiplierTimeLeft, 0)
   };
 }
 
 function clickCookie(state) {
   const safeState = normalizeState(state);
-
   return {
     ...safeState,
-    cookies: safeState.cookies + safeState.cookiesPerClick
+    cookies: safeState.cookies + (safeState.cookiesPerClick * safeState.multiplier)
   };
 }
 
 function addPassiveCookies(state, secondsElapsed) {
   const safeState = normalizeState(state);
   const safeSecondsElapsed = toNonNegativeNumber(secondsElapsed, 0);
-
   return {
     ...safeState,
-    cookies: safeState.cookies + (safeState.cookiesPerSecond * safeSecondsElapsed)
+    cookies: safeState.cookies + (safeState.cookiesPerSecond * safeState.multiplier * safeSecondsElapsed)
   };
 }
 
 function canAfford(cookies, cost) {
-  const safeCookies = toNonNegativeNumber(cookies, 0);
-  const safeCost = toNonNegativeNumber(cost, 0);
-  return safeCookies >= safeCost;
+  return toNonNegativeNumber(cookies, 0) >= toNonNegativeNumber(cost, 0);
 }
 
 function spendCookies(state, cost) {
   const safeState = normalizeState(state);
   const safeCost = toNonNegativeNumber(cost, 0);
-
-  if (!canAfford(safeState.cookies, safeCost)) {
-    return safeState;
-  }
-
+  if (!canAfford(safeState.cookies, safeCost)) return safeState;
   return {
     ...safeState,
     cookies: safeState.cookies - safeCost
@@ -120,8 +115,7 @@ function spendCookies(state, cost) {
 }
 
 function getClickUpgradeCost(count) {
-  const safeCount = toNonNegativeNumber(count, 0);
-  return Math.floor(10 * Math.pow(1.5, safeCount));
+  return Math.floor(10 * Math.pow(1.5, toNonNegativeNumber(count, 0)));
 }
 
 function getBuildingCost(id, count) {
@@ -133,11 +127,7 @@ function getBuildingCost(id, count) {
 function buyClickUpgrade(state) {
   const safeState = normalizeState(state);
   const cost = getClickUpgradeCost(safeState.clickUpgrades);
-
-  if (!canAfford(safeState.cookies, cost)) {
-    return safeState;
-  }
-
+  if (!canAfford(safeState.cookies, cost)) return safeState;
   const newState = spendCookies(safeState, cost);
   return {
     ...newState,
@@ -149,37 +139,23 @@ function buyClickUpgrade(state) {
 function buyBuilding(state, id) {
   const safeState = normalizeState(state);
   if (!BUILDINGS[id]) return safeState;
-
   const cost = getBuildingCost(id, safeState.upgrades[id]);
-  if (!canAfford(safeState.cookies, cost)) {
-    return safeState;
-  }
-
+  if (!canAfford(safeState.cookies, cost)) return safeState;
   const newState = spendCookies(safeState, cost);
   newState.upgrades[id] += 1;
-  
-  // Re-normalize to update CPS
-  return normalizeState(newState);
+  return normalizeState(newState); // Re-calculate CPS
 }
 
 function getCookiesPerSecond(upgrades) {
-  if (!upgrades || typeof upgrades !== 'object') {
-    return 0;
-  }
-
+  if (!upgrades || typeof upgrades !== 'object') return 0;
   return Object.keys(upgrades).reduce((total, id) => {
     const entry = upgrades[id];
     if (!entry) return total;
-
     if (typeof entry === 'object') {
-      const count = toNonNegativeNumber(entry.count, 0);
-      const production = toNonNegativeNumber(entry.production, 0);
-      return total + (count * production);
-    } else {
-      const count = toNonNegativeNumber(entry, 0);
-      const production = BUILDINGS[id] ? BUILDINGS[id].production : 0;
-      return total + (count * production);
+      return total + (toNonNegativeNumber(entry.count, 0) * toNonNegativeNumber(entry.production, 0));
     }
+    const production = BUILDINGS[id] ? BUILDINGS[id].production : 0;
+    return total + (toNonNegativeNumber(entry, 0) * production);
   }, 0);
 }
 
@@ -210,63 +186,83 @@ if (typeof window !== 'undefined') {
     const cookieCount = document.getElementById('cookie-count');
     const cpsDisplay = document.getElementById('cps-count');
     const cookiesPerClickDisplay = document.getElementById('cookies-per-click');
+    const multiplierIndicator = document.getElementById('multiplier-indicator');
+    const multiplierValue = document.getElementById('multiplier-value');
+    const multiplierTime = document.getElementById('multiplier-time');
 
-    if (!cookieButton || !cookieCount) {
-      return;
-    }
+    if (!cookieButton || !cookieCount) return;
 
     let state = createGameState();
 
     const updateUI = () => {
       cookieCount.textContent = Math.floor(state.cookies).toLocaleString();
-      
-      if (cpsDisplay) {
-        cpsDisplay.textContent = state.cookiesPerSecond.toFixed(1).toLocaleString();
-      }
-      
-      if (cookiesPerClickDisplay) {
-        cookiesPerClickDisplay.textContent = state.cookiesPerClick;
-      }
+      if (cpsDisplay) cpsDisplay.textContent = (state.cookiesPerSecond * state.multiplier).toFixed(1).toLocaleString();
+      if (cookiesPerClickDisplay) cookiesPerClickDisplay.textContent = state.cookiesPerClick * state.multiplier;
 
-      // Check for Golden Cookie (Temple milestone)
+      // Temple milestone image swap
       if (state.upgrades.temple > 0) {
         cookieButton.style.backgroundImage = "url('/images/golden.png')";
       } else {
-        cookieButton.style.backgroundImage = ""; // Restore default from CSS
+        cookieButton.style.backgroundImage = ""; 
       }
 
-      // Update Click Upgrade UI
+      // Multiplier UI
+      if (state.multiplierTimeLeft > 0) {
+        multiplierIndicator.style.display = 'block';
+        multiplierValue.textContent = state.multiplier;
+        multiplierTime.textContent = Math.ceil(state.multiplierTimeLeft);
+      } else {
+        multiplierIndicator.style.display = 'none';
+      }
+
+      // Click Upgrade UI
       const upgradeClickBtn = document.getElementById('upgrade-click');
       const upgradeClickCost = document.getElementById('upgrade-click-cost');
       const upgradeClickCount = document.getElementById('upgrade-click-count');
-
       if (upgradeClickCost) {
         const cost = getClickUpgradeCost(state.clickUpgrades);
         upgradeClickCost.textContent = cost.toLocaleString();
         if (upgradeClickBtn) upgradeClickBtn.disabled = !canAfford(state.cookies, cost);
       }
-      if (upgradeClickCount) {
-        upgradeClickCount.textContent = state.clickUpgrades;
-      }
+      if (upgradeClickCount) upgradeClickCount.textContent = state.clickUpgrades;
 
-      // Update Buildings UI
+      // Buildings UI
       Object.keys(BUILDINGS).forEach(id => {
         const btn = document.getElementById(`buy-${id}`);
         const costEl = document.getElementById(`${id}-price`);
         const countEl = document.getElementById(`${id}-count`);
-
         if (costEl) {
           const cost = getBuildingCost(id, state.upgrades[id]);
           costEl.textContent = cost.toLocaleString();
           if (btn) btn.disabled = !canAfford(state.cookies, cost);
         }
-        if (countEl) {
-          countEl.textContent = state.upgrades[id];
-        }
+        if (countEl) countEl.textContent = state.upgrades[id];
       });
     };
 
-    // Fetch initial score from server
+    const spawnGoldenCookie = () => {
+      const golden = document.createElement('div');
+      golden.className = 'golden-cookie';
+      const x = Math.random() * (window.innerWidth - 200) + 100;
+      const y = Math.random() * (window.innerHeight - 200) + 100;
+      golden.style.left = `${x}px`;
+      golden.style.top = `${y}px`;
+      golden.addEventListener('click', () => {
+        const factors = [2, 5, 7, 10];
+        state.multiplier = factors[Math.floor(Math.random() * factors.length)];
+        state.multiplierTimeLeft = 15;
+        golden.remove();
+        updateUI();
+      });
+      document.body.appendChild(golden);
+      setTimeout(() => { if (golden.parentElement) { golden.style.opacity = '0'; setTimeout(() => golden.remove(), 500); } }, 10000);
+    };
+
+    const scheduleNextGolden = () => {
+      setTimeout(() => { spawnGoldenCookie(); scheduleNextGolden(); }, Math.random() * 60000 + 30000);
+    };
+    scheduleNextGolden();
+
     fetch('/users/score')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
@@ -278,9 +274,7 @@ if (typeof window !== 'undefined') {
           updateUI();
         }
       })
-      .catch(err => console.error('Erreur lors du chargement du score:', err));
-
-    updateUI();
+      .catch(err => console.error('Erreur score:', err));
 
     const saveScore = () => {
       fetch('/users/score', {
@@ -292,44 +286,39 @@ if (typeof window !== 'undefined') {
           cookiesPerSecond: state.cookiesPerSecond,
           upgrades: state.upgrades
         })
-      }).catch(err => console.error('Erreur lors de la sauvegarde du score:', err));
+      }).catch(err => console.error('Erreur sauvegarde:', err));
     };
 
-    cookieButton.addEventListener('click', () => {
-      state = clickCookie(state);
-      updateUI();
-    });
+    cookieButton.addEventListener('click', () => { state = clickCookie(state); updateUI(); });
 
-    // Delegate building buy clicks
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('.buy-building');
       if (btn) {
-        const id = btn.dataset.buildingId;
-        state = buyBuilding(state, id);
+        state = buyBuilding(state, btn.dataset.buildingId);
         updateUI();
         saveScore();
       }
-      
-      const clickUpgradeBtn = e.target.closest('#upgrade-click');
-      if (clickUpgradeBtn) {
+      const clickBtn = e.target.closest('#upgrade-click');
+      if (clickBtn) {
         state = buyClickUpgrade(state);
         updateUI();
         saveScore();
       }
     });
 
-    // Passive production interval (every 100ms for smoothness)
     setInterval(() => {
-      if (state.cookiesPerSecond > 0) {
-        state.cookies += state.cookiesPerSecond / 10;
-        updateUI();
+      let changed = false;
+      if (state.cookiesPerSecond > 0) { state.cookies += (state.cookiesPerSecond * state.multiplier) / 10; changed = true; }
+      if (state.multiplierTimeLeft > 0) {
+        state.multiplierTimeLeft -= 0.1;
+        if (state.multiplierTimeLeft <= 0) { state.multiplier = 1; state.multiplierTimeLeft = 0; }
+        changed = true;
       }
+      if (changed) updateUI();
     }, 100);
 
-    // Periodically save score every 10 seconds
     setInterval(saveScore, 10000);
-
-    // Also save on page unload
     window.addEventListener('beforeunload', saveScore);
+    updateUI();
   });
 }

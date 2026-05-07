@@ -9,7 +9,8 @@ const {
   spendCookies,
   getCookiesPerSecond,
   getClickUpgradeCost,
-  buyClickUpgrade
+  buyClickUpgrade,
+  normalizeState
 } = clicker;
 
 describe('Clicker logic', () => {
@@ -234,6 +235,45 @@ describe('Clicker logic', () => {
       expect(nextState.cookies).toBe(85);
       expect(nextState.clickUpgrades).toBe(2);
       expect(nextState.cookiesPerClick).toBe(3);
+    });
+  });
+
+  describe('Multiplier logic', () => {
+    it('applies multiplier to clicks', () => {
+      const state = {
+        ...createGameState(),
+        cookies: 0,
+        multiplier: 2
+      };
+
+      const nextState = clickCookie(state);
+
+      // 1 (base) * 2 (multiplier) = 2
+      expect(nextState.cookies).toBe(2);
+    });
+
+    it('applies multiplier to passive production', () => {
+      const state = {
+        ...createGameState(),
+        cookies: 10,
+        cookiesPerSecond: 5,
+        multiplier: 3
+      };
+
+      const nextState = addPassiveCookies(state, 2);
+
+      // 10 + (5 * 3 * 2) = 10 + 30 = 40
+      expect(nextState.cookies).toBe(40);
+    });
+
+    it('normalizes multiplier values', () => {
+      const state = {
+        multiplier: -5
+      };
+
+      const safeState = normalizeState(state);
+
+      expect(safeState.multiplier).toBe(1);
     });
   });
 });
