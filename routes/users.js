@@ -5,12 +5,12 @@ var bcrypt = require('bcryptjs');
 var db = require('../db');
 
 /* GET registration page */
-router.get('/register', function(req, res) {
+router.get('/register', function (req, res) {
   res.render('register', { title: 'Inscription', error: null });
 });
 
 /* POST registration */
-router.post('/register', function(req, res) {
+router.post('/register', function (req, res) {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.render('register', { title: 'Inscription', error: 'Veuillez remplir tous les champs.' });
@@ -28,14 +28,13 @@ router.post('/register', function(req, res) {
     res.render('register', { title: 'Inscription', error: 'Une erreur est survenue.' });
   }
 });
-
 /* GET login page */
-router.get('/login', function(req, res) {
+router.get('/login', function (req, res) {
   res.render('login', { title: 'Connexion', error: null });
 });
 
 /* POST login */
-router.post('/login', function(req, res) {
+router.post('/login', function (req, res) {
   const { username, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
 
@@ -48,14 +47,15 @@ router.post('/login', function(req, res) {
   }
 });
 
+
 /* POST logout */
-router.post('/logout', function(req, res) {
+router.post('/logout', function (req, res) {
   req.session.destroy();
   res.redirect('/');
 });
 
 /* POST update score */
-router.post('/score', function(req, res) {
+router.post('/score', function (req, res) {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
@@ -71,7 +71,7 @@ router.post('/score', function(req, res) {
 });
 
 /* GET current score */
-router.get('/score', function(req, res) {
+router.get('/score', function (req, res) {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Non authentifié' });
   }

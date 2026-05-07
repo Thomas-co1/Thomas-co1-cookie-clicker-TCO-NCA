@@ -44,3 +44,6 @@ playwright/.cache/
 tmp/
 temp/
 *.tmp
+
+# Bases de données
+*.sqlite
