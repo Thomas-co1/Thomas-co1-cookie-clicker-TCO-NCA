@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 var express = require('express');
 var router = express.Router();
 var bcrypt = require('bcryptjs');
@@ -60,10 +59,10 @@ router.post('/score', function(req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const { score } = req.body;
+  const { score, clickUpgrades } = req.body;
   try {
-    const stmt = db.prepare('UPDATE users SET score = ? WHERE id = ?');
-    stmt.run(score, req.session.userId);
+    const stmt = db.prepare('UPDATE users SET score = ?, click_upgrades = ? WHERE id = ?');
+    stmt.run(score, clickUpgrades, req.session.userId);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
@@ -76,16 +75,11 @@ router.get('/score', function(req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const user = db.prepare('SELECT score FROM users WHERE id = ?').get(req.session.userId);
-  res.json({ score: user ? user.score : 0 });
-=======
-const express = require('express');
-const router = express.Router();
-
-/* GET users listing. */
-router.get('/', function (req, res, next) {
-  res.send('respond with a resource');
->>>>>>> Stashed changes
+  const user = db.prepare('SELECT score, click_upgrades FROM users WHERE id = ?').get(req.session.userId);
+  res.json({ 
+    score: user ? user.score : 0,
+    clickUpgrades: user ? user.click_upgrades : 0
+  });
 });
 
 module.exports = router;
