@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 var express = require('express');
 var router = express.Router();
 var bcrypt = require('bcryptjs');
@@ -77,6 +78,14 @@ router.get('/score', function(req, res) {
 
   const user = db.prepare('SELECT score FROM users WHERE id = ?').get(req.session.userId);
   res.json({ score: user ? user.score : 0 });
+=======
+const express = require('express');
+const router = express.Router();
+
+/* GET users listing. */
+router.get('/', function (req, res, next) {
+  res.send('respond with a resource');
+>>>>>>> Stashed changes
 });
 
 module.exports = router;
