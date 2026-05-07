@@ -23,7 +23,10 @@ const columnsToAdd = [
   { name: 'cookies_per_second', type: 'INTEGER DEFAULT 0' },
   { name: 'upgrades', type: "TEXT DEFAULT '{}'" },
   { name: 'total_cookies_earned', type: 'REAL DEFAULT 0' },
-  { name: 'achievements', type: "TEXT DEFAULT '[]'" }
+  { name: 'achievements', type: "TEXT DEFAULT '[]'" },
+  { name: 'prestige_level', type: 'INTEGER DEFAULT 0' },
+  { name: 'last_save_time', type: 'INTEGER' },
+  { name: 'total_clicks', type: 'INTEGER DEFAULT 0' }
 ];
 
 columnsToAdd.forEach(column => {

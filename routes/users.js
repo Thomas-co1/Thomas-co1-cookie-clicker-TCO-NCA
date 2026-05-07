@@ -59,9 +59,9 @@ router.post('/score', function (req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const { score, totalCookiesEarned, clickUpgrades, cookiesPerSecond, upgrades, unlockedAchievements } = req.body;
+  const { score, totalCookiesEarned, clickUpgrades, cookiesPerSecond, upgrades, unlockedAchievements, prestigeLevel, totalClicks } = req.body;
   try {
-    const stmt = db.prepare('UPDATE users SET score = ?, total_cookies_earned = ?, click_upgrades = ?, cookies_per_second = ?, upgrades = ?, achievements = ? WHERE id = ?');
+    const stmt = db.prepare('UPDATE users SET score = ?, total_cookies_earned = ?, click_upgrades = ?, cookies_per_second = ?, upgrades = ?, achievements = ?, prestige_level = ?, total_clicks = ?, last_save_time = ? WHERE id = ?');
     stmt.run(
       score, 
       totalCookiesEarned || score || 0,
@@ -69,6 +69,9 @@ router.post('/score', function (req, res) {
       cookiesPerSecond || 0, 
       JSON.stringify(upgrades || {}),
       JSON.stringify(unlockedAchievements || []),
+      prestigeLevel || 0,
+      totalClicks || 0,
+      Date.now(),
       req.session.userId
     );
     res.json({ success: true });
@@ -84,7 +87,7 @@ router.get('/score', function (req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const user = db.prepare('SELECT score, total_cookies_earned, click_upgrades, cookies_per_second, upgrades, achievements FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT score, total_cookies_earned, click_upgrades, cookies_per_second, upgrades, achievements, prestige_level, total_clicks, last_save_time FROM users WHERE id = ?').get(req.session.userId);
   
   let upgrades = {};
   let unlockedAchievements = [];
@@ -102,7 +105,10 @@ router.get('/score', function (req, res) {
     clickUpgrades: user ? user.click_upgrades : 0,
     cookiesPerSecond: user ? user.cookies_per_second : 0,
     upgrades: upgrades,
-    unlockedAchievements: unlockedAchievements
+    unlockedAchievements: unlockedAchievements,
+    prestigeLevel: user ? user.prestige_level : 0,
+    totalClicks: user ? user.total_clicks : 0,
+    lastSaveTime: user ? user.last_save_time : Date.now()
   });
 });
 
