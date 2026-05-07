@@ -7,7 +7,9 @@ const {
   addPassiveCookies,
   canAfford,
   spendCookies,
-  getCookiesPerSecond
+  getCookiesPerSecond,
+  getClickUpgradeCost,
+  buyClickUpgrade
 } = clicker;
 
 describe('Clicker logic', () => {
@@ -163,7 +165,7 @@ describe('Clicker logic', () => {
       const nextState = spendCookies(state, 1);
 
       expect(nextState.cookies).toBe(0);
-      expect(nextState.cookiesPerClick).toBe(0);
+      expect(nextState.cookiesPerClick).toBe(1);
       expect(nextState.cookiesPerSecond).toBe(0);
     });
 
@@ -181,6 +183,57 @@ describe('Clicker logic', () => {
       const nextState = addPassiveCookies(state, 5);
 
       expect(nextState.cookies).toBeCloseTo(1.5);
+    });
+  });
+
+  describe('Click upgrades', () => {
+    it('calculates upgrade cost correctly', () => {
+      expect(getClickUpgradeCost(0)).toBe(10);
+      expect(getClickUpgradeCost(1)).toBe(15);
+      expect(getClickUpgradeCost(2)).toBe(22); // floor(10 * 1.5^2) = floor(22.5) = 22
+    });
+
+    it('buys a click upgrade when possible', () => {
+      const state = {
+        ...createGameState(),
+        cookies: 10,
+        clickUpgrades: 0
+      };
+
+      const nextState = buyClickUpgrade(state);
+
+      expect(nextState.cookies).toBe(0);
+      expect(nextState.clickUpgrades).toBe(1);
+      expect(nextState.cookiesPerClick).toBe(2);
+    });
+
+    it('does not buy click upgrade if not enough cookies', () => {
+      const state = {
+        ...createGameState(),
+        cookies: 5,
+        clickUpgrades: 0
+      };
+
+      const nextState = buyClickUpgrade(state);
+
+      expect(nextState.cookies).toBe(5);
+      expect(nextState.clickUpgrades).toBe(0);
+      expect(nextState.cookiesPerClick).toBe(1);
+    });
+
+    it('increases cost with more upgrades', () => {
+      const state = {
+        ...createGameState(),
+        cookies: 100,
+        clickUpgrades: 1
+      };
+
+      // Cost for second upgrade (count 1) is 15
+      const nextState = buyClickUpgrade(state);
+
+      expect(nextState.cookies).toBe(85);
+      expect(nextState.clickUpgrades).toBe(2);
+      expect(nextState.cookiesPerClick).toBe(3);
     });
   });
 });
