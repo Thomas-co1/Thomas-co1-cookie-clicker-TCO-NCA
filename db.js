@@ -12,14 +12,16 @@ db.exec(`
     password TEXT NOT NULL,
     score INTEGER DEFAULT 0,
     click_upgrades INTEGER DEFAULT 0,
-    cookies_per_second INTEGER DEFAULT 0
+    cookies_per_second INTEGER DEFAULT 0,
+    upgrades TEXT DEFAULT '{}'
   )
 `);
 
 // Add columns if they don't exist
 const columnsToAdd = [
   { name: 'click_upgrades', type: 'INTEGER DEFAULT 0' },
-  { name: 'cookies_per_second', type: 'INTEGER DEFAULT 0' }
+  { name: 'cookies_per_second', type: 'INTEGER DEFAULT 0' },
+  { name: 'upgrades', type: "TEXT DEFAULT '{}'" }
 ];
 
 columnsToAdd.forEach(column => {

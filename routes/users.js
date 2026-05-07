@@ -59,10 +59,16 @@ router.post('/score', function (req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const { score, clickUpgrades, cookiesPerSecond } = req.body;
+  const { score, clickUpgrades, cookiesPerSecond, upgrades } = req.body;
   try {
-    const stmt = db.prepare('UPDATE users SET score = ?, click_upgrades = ?, cookies_per_second = ? WHERE id = ?');
-    stmt.run(score, clickUpgrades || 0, cookiesPerSecond || 0, req.session.userId);
+    const stmt = db.prepare('UPDATE users SET score = ?, click_upgrades = ?, cookies_per_second = ?, upgrades = ? WHERE id = ?');
+    stmt.run(
+      score, 
+      clickUpgrades || 0, 
+      cookiesPerSecond || 0, 
+      JSON.stringify(upgrades || {}), 
+      req.session.userId
+    );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
@@ -75,11 +81,20 @@ router.get('/score', function (req, res) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  const user = db.prepare('SELECT score, click_upgrades, cookies_per_second FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT score, click_upgrades, cookies_per_second, upgrades FROM users WHERE id = ?').get(req.session.userId);
+  
+  let upgrades = {};
+  try {
+    upgrades = JSON.parse(user ? user.upgrades : '{}');
+  } catch (e) {
+    upgrades = {};
+  }
+
   res.json({ 
     score: user ? user.score : 0,
     clickUpgrades: user ? user.click_upgrades : 0,
-    cookiesPerSecond: user ? user.cookies_per_second : 0
+    cookiesPerSecond: user ? user.cookies_per_second : 0,
+    upgrades: upgrades
   });
 });
 

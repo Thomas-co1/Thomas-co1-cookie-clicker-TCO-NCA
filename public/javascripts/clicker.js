@@ -36,7 +36,6 @@ function toNonNegativeNumber(value, fallback = 0) {
   if (!isFiniteNumber(value)) {
     return fallback;
   }
-
   return value < 0 ? 0 : value;
 }
 
@@ -45,20 +44,22 @@ function normalizeState(state) {
   const clickUpgrades = toNonNegativeNumber(baseState.clickUpgrades, 0);
   const upgrades = baseState.upgrades || {};
   
-  // Ensure all buildings exist
+  // Always ensure all buildings exist in the upgrades object
   Object.keys(BUILDINGS).forEach(id => {
     if (upgrades[id] === undefined) {
       upgrades[id] = 0;
     } else if (typeof upgrades[id] === 'object' && upgrades[id] !== null) {
+      // Handle old format from tests if necessary
       upgrades[id] = toNonNegativeNumber(upgrades[id].count, 0);
     } else {
       upgrades[id] = toNonNegativeNumber(upgrades[id], 0);
     }
   });
 
-  // Calculate base CPS from buildings
+  // Calculate total CPS from upgrades
   let calculatedCPS = 0;
   let hasBoughtAnything = false;
+
   Object.keys(BUILDINGS).forEach(id => {
     const count = upgrades[id];
     if (count > 0) {
@@ -67,8 +68,8 @@ function normalizeState(state) {
     }
   });
 
-  // Fallback for tests if no buildings bought but CPS manually set
-  const baseCPS = hasBoughtAnything ? calculatedCPS : toNonNegativeNumber(baseState.cookiesPerSecond, 0);
+  // If no buildings have been bought, respect the manually set cookiesPerSecond (for tests/migration)
+  const totalCPS = hasBoughtAnything ? calculatedCPS : toNonNegativeNumber(baseState.cookiesPerSecond, 0);
 
   return {
     ...baseState,
@@ -76,7 +77,7 @@ function normalizeState(state) {
     clickUpgrades: clickUpgrades,
     upgrades: upgrades,
     cookiesPerClick: 1 + clickUpgrades,
-    cookiesPerSecond: baseCPS,
+    cookiesPerSecond: totalCPS,
     multiplier: Math.max(1, toNonNegativeNumber(baseState.multiplier, 1)),
     multiplierTimeLeft: toNonNegativeNumber(baseState.multiplierTimeLeft, 0)
   };
@@ -119,7 +120,8 @@ function getClickUpgradeCost(count) {
 
 function getBuildingCost(id, count) {
   const baseCost = BUILDINGS[id] ? BUILDINGS[id].cost : 0;
-  return Math.floor(baseCost * Math.pow(1.15, toNonNegativeNumber(count, 0)));
+  const safeCount = toNonNegativeNumber(count, 0);
+  return Math.floor(baseCost * Math.pow(1.15, safeCount));
 }
 
 function buyClickUpgrade(state) {
@@ -197,7 +199,7 @@ if (typeof window !== 'undefined') {
       if (cpsDisplay) cpsDisplay.textContent = (state.cookiesPerSecond * state.multiplier).toFixed(1).toLocaleString();
       if (cookiesPerClickDisplay) cookiesPerClickDisplay.textContent = state.cookiesPerClick * state.multiplier;
 
-      // Golden Cookie (Temple milestone image swap)
+      // Temple milestone image swap
       if (state.upgrades.temple > 0) {
         cookieButton.style.backgroundImage = "url('/images/golden.png')";
       } else {
