@@ -11,19 +11,23 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     score INTEGER DEFAULT 0,
-    cookies_per_second INTEGER DEFAULT 0,
-    upgrades TEXT DEFAULT '{}'
+    click_upgrades INTEGER DEFAULT 0,
+    cookies_per_second INTEGER DEFAULT 0
   )
 `);
 
 // Add columns if they don't exist
-try {
-  db.exec('ALTER TABLE users ADD COLUMN cookies_per_second INTEGER DEFAULT 0');
-} catch (e) {}
-try {
-  db.exec("ALTER TABLE users ADD COLUMN upgrades TEXT DEFAULT '{}'");
-} catch (e) {}
+const columnsToAdd = [
+  { name: 'click_upgrades', type: 'INTEGER DEFAULT 0' },
+  { name: 'cookies_per_second', type: 'INTEGER DEFAULT 0' }
+];
 
-
+columnsToAdd.forEach(column => {
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN ${column.name} ${column.type}`);
+  } catch (e) {
+    // Column already exists or other error
+  }
+});
 
 module.exports = db;

@@ -1,182 +1,131 @@
 <!DOCTYPE html>
 <html>
-
-<head>
-  <title>
-    <%= title %>
-  </title>
-  <link rel='stylesheet' href='/stylesheets/style.css' />
-  <style>
-    .user-header {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      padding: 8px 16px;
-      border-radius: 50px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .username {
-      color: #fff;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-
-    .logout-btn {
-      background: none;
-      border: none;
-      color: #ef4444;
-      cursor: pointer;
-      font-size: 0.8rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: background 0.3s;
-    }
-
-    .logout-btn:hover {
-      background: rgba(239, 68, 68, 0.1);
-    }
-
-    .auth-links {
-      display: flex;
-      gap: 12px;
-    }
-
-    .auth-link {
-      color: #6366f1;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-
-    .auth-link:hover {
-      text-decoration: underline;
-    }
-  </style>
-</head>
-
-<body>
-  <header class="user-header">
-    <% if (user) { %>
-      <span class="username">
-        <%= user.username %>
-      </span>
-      <form action="/users/logout" method="POST" style="margin: 0;">
-        <button type="submit" class="logout-btn">Déconnexion</button>
-      </form>
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+    <style>
+      .user-header {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 8px 16px;
+        border-radius: 50px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .username {
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+      .logout-btn {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background 0.3s;
+      }
+      .logout-btn:hover {
+        background: rgba(239, 68, 68, 0.1);
+      }
+      .auth-links {
+        display: flex;
+        gap: 12px;
+      }
+      .auth-link {
+        color: #6366f1;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+      .auth-link:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="user-header">
+      <% if (user) { %>
+        <span class="username"><%= user.username %></span>
+        <form action="/users/logout" method="POST" style="margin: 0;">
+          <button type="submit" class="logout-btn">Déconnexion</button>
+        </form>
       <% } else { %>
         <div class="auth-links">
           <a href="/users/login" class="auth-link">Connexion</a>
           <a href="/users/register" class="auth-link">Inscription</a>
         </div>
-        <% } %>
-  </header>
+      <% } %>
+    </header>
 
-  <main class="layout">
-    <h1 class="title">
-      <%= title %>
-    </h1>
-    <p class="subtitle">Clique sur le cookie pour gagner des points.</p>
+    <main class="layout">
+      <h1 class="title"><%= title %></h1>
+      <p class="subtitle">Clique sur le cookie pour gagner des points.</p>
 
-    <section class="score-card" aria-live="polite">
-      <span class="score-label">Cookies</span>
-      <span id="cookie-count" class="score-value">0</span>
-      <div class="cps-display">
-        <span id="cps-count">0</span> cookies / sec
-      </div>
-    </section>
-
-    <button id="cookie-button" class="cookie-button" type="button" aria-label="Cliquer sur le cookie">
-      <span class="cookie-fallback" aria-hidden="true">Cookie</span>
-    </button>
-
-    <section class="upgrades">
-      <h2 class="section-title">Améliorations</h2>
-      
-      <!-- Grandma -->
-      <div class="upgrade-item">
-        <div class="upgrade-info">
-          <span class="upgrade-name">Grand-mère (<span id="grandma-count">0</span>)</span>
-          <span class="upgrade-desc">Produit 1 cookie par seconde</span>
+      <section class="score-card" aria-live="polite">
+        <div class="score-group">
+          <span class="score-label">Cookies</span>
+          <span id="cookie-count" class="score-value">0</span>
         </div>
-        <button id="buy-grandma" class="buy-button" disabled>
-          Acheter (<span id="grandma-price">15</span>)
-        </button>
-
-      </div>
-
-      <!-- Farm -->
-      <div class="upgrade-item">
-        <div class="upgrade-info">
-          <span class="upgrade-name">Ferme (<span id="farm-count">0</span>)</span>
-          <span class="upgrade-desc">Produit 8 cookies par seconde</span>
+        <div class="score-group">
+          <span class="score-label">Par clic</span>
+          <span id="cookies-per-click" class="score-value">1</span>
         </div>
-        <button id="buy-farm" class="buy-button" disabled>
-          Acheter (<span id="farm-price">100</span>)
-        </button>
-
-      </div>
-
-      <!-- Mine -->
-      <div class="upgrade-item">
-        <div class="upgrade-info">
-          <span class="upgrade-name">Mine (<span id="mine-count">0</span>)</span>
-          <span class="upgrade-desc">Produit 47 cookies par seconde</span>
+        <div class="score-group">
+          <span class="score-label">Cookies / sec</span>
+          <span id="cps-count" class="score-value">0</span>
         </div>
-        <button id="buy-mine" class="buy-button" disabled>
-          Acheter (<span id="mine-price">500</span>)
-        </button>
+      </section>
 
-      </div>
+      <button id="cookie-button" class="cookie-button" type="button" aria-label="Cliquer sur le cookie">
+        <span class="cookie-fallback" aria-hidden="true">Cookie</span>
+      </button>
 
-      <!-- Factory -->
-      <div class="upgrade-item">
-        <div class="upgrade-info">
-          <span class="upgrade-name">Usine (<span id="factory-count">0</span>)</span>
-          <span class="upgrade-desc">Produit 260 cookies par seconde</span>
+      <section class="upgrades-panel">
+        <h2 class="section-title">Améliorations</h2>
+        <div class="upgrades-list">
+          <!-- Super Click Upgrade -->
+          <button id="upgrade-click" class="upgrade-item" type="button">
+            <div class="upgrade-icon-container">
+              <img src="/images/click_upgrade.png" alt="Clic" class="upgrade-icon">
+            </div>
+            <div class="upgrade-info">
+              <span class="upgrade-name">Super Clic</span>
+              <span class="upgrade-desc">Augmente les cookies par clic de 1</span>
+            </div>
+            <div class="upgrade-meta">
+              <span class="upgrade-cost"><span id="upgrade-click-cost">10</span> 🍪</span>
+              <span class="upgrade-count">Niv. <span id="upgrade-click-count">0</span></span>
+            </div>
+          </button>
+
+          <!-- Auto Clicker Upgrade -->
+          <button id="buy-autoclicker" class="upgrade-item" type="button">
+            <div class="upgrade-icon-container">
+              <span style="font-size: 24px;">🤖</span>
+            </div>
+            <div class="upgrade-info">
+              <span class="upgrade-name">Auto-Clicker</span>
+              <span class="upgrade-desc">Produit 1 cookie par seconde</span>
+            </div>
+            <div class="upgrade-meta">
+              <span class="upgrade-cost"><span id="autoclicker-price">15</span> 🍪</span>
+            </div>
+          </button>
         </div>
-        <button id="buy-factory" class="buy-button" disabled>
-          Acheter (<span id="factory-price">3000</span>)
-        </button>
+      </section>
+    </main>
 
-      </div>
-
-      <!-- Bank -->
-      <div class="upgrade-item">
-        <div class="upgrade-info">
-          <span class="upgrade-name">Banque (<span id="bank-count">0</span>)</span>
-          <span class="upgrade-desc">Produit 1400 cookies par seconde</span>
-        </div>
-        <button id="buy-bank" class="buy-button" disabled>
-          Acheter (<span id="bank-price">10000</span>)
-        </button>
-
-      </div>
-
-      <!-- Temple -->
-      <div class="upgrade-item">
-        <div class="upgrade-info">
-          <span class="upgrade-name">Temple (<span id="temple-count">0</span>)</span>
-          <span class="upgrade-desc">Produit 7800 cookies par seconde</span>
-        </div>
-        <button id="buy-temple" class="buy-button" disabled>
-          Acheter (<span id="temple-price">50000</span>)
-        </button>
-
-      </div>
-    </section>
-
-  </main>
-
-  <script src='/javascripts/clicker.js'></script>
-</body>
-
+    <script src='/javascripts/clicker.js'></script>
+  </body>
 </html>
