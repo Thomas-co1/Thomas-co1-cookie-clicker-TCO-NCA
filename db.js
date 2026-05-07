@@ -10,7 +10,8 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    score INTEGER DEFAULT 0
+    score INTEGER DEFAULT 0,
+    click_upgrades INTEGER DEFAULT 0
   )
 `);
 
