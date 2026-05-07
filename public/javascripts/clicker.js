@@ -43,34 +43,32 @@ function normalizeState(state) {
   const clickUpgrades = toNonNegativeNumber(baseState.clickUpgrades, 0);
   const upgrades = baseState.upgrades || {};
   
-  // Calculate total CPS from upgrades
-  // We only recalculate if upgrades has any non-zero count or if it's the test format (with production)
-  let calculatedCPS = 0;
-  let hasActiveUpgrades = false;
-
-  Object.keys(upgrades).forEach(id => {
-    const entry = upgrades[id];
-    if (!entry) return;
-
-    if (typeof entry === 'object' && entry !== null) {
-      const count = toNonNegativeNumber(entry.count, 0);
-      const production = toNonNegativeNumber(entry.production, 0);
-      if (count > 0) {
-        calculatedCPS += count * production;
-        hasActiveUpgrades = true;
-      }
+  // Always ensure all buildings exist in the upgrades object
+  Object.keys(BUILDINGS).forEach(id => {
+    if (upgrades[id] === undefined) {
+      upgrades[id] = 0;
+    } else if (typeof upgrades[id] === 'object' && upgrades[id] !== null) {
+      // Handle old format from tests if necessary
+      upgrades[id] = toNonNegativeNumber(upgrades[id].count, 0);
     } else {
-      const count = toNonNegativeNumber(entry, 0);
-      const production = BUILDINGS[id] ? BUILDINGS[id].production : 0;
-      if (count > 0) {
-        calculatedCPS += count * production;
-        hasActiveUpgrades = true;
-      }
+      upgrades[id] = toNonNegativeNumber(upgrades[id], 0);
     }
   });
 
-  // If no buildings have been bought, respect the manually set cookiesPerSecond (for tests)
-  const totalCPS = hasActiveUpgrades ? calculatedCPS : toNonNegativeNumber(baseState.cookiesPerSecond, 0);
+  // Calculate total CPS from upgrades
+  let calculatedCPS = 0;
+  let hasBoughtAnything = false;
+
+  Object.keys(BUILDINGS).forEach(id => {
+    const count = upgrades[id];
+    if (count > 0) {
+      calculatedCPS += count * BUILDINGS[id].production;
+      hasBoughtAnything = true;
+    }
+  });
+
+  // If no buildings have been bought, respect the manually set cookiesPerSecond (for tests/migration)
+  const totalCPS = hasBoughtAnything ? calculatedCPS : toNonNegativeNumber(baseState.cookiesPerSecond, 0);
 
   return {
     ...baseState,
@@ -228,6 +226,13 @@ if (typeof window !== 'undefined') {
       
       if (cookiesPerClickDisplay) {
         cookiesPerClickDisplay.textContent = state.cookiesPerClick;
+      }
+
+      // Check for Golden Cookie (Temple milestone)
+      if (state.upgrades.temple > 0) {
+        cookieButton.style.backgroundImage = "url('/images/golden.png')";
+      } else {
+        cookieButton.style.backgroundImage = ""; // Restore default from CSS
       }
 
       // Update Click Upgrade UI
